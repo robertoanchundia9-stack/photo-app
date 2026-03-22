@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZARAMARINA</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff00ff">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Setup Profile Modal -->
+    <div id="profile-modal" class="modal active">
+        <div class="modal-content glass">
+            <h2>Bienvenido</h2>
+            <p>Elige un nombre para empezar a chatear.</p>
+            <input type="text" id="username-input" placeholder="Tu nombre...">
+            <button id="save-profile-btn" class="btn primary">Entrar</button>
+        </div>
+    </div>
+
+    <!-- Viewer Modal -->
+    <div id="viewer-modal" class="modal">
+        <div class="modal-content glass viewer-content">
+            <button id="close-viewer-btn" class="close-btn">&times;</button>
+            <div id="viewer-media-container"></div>
+            <a id="download-btn" class="btn primary" href="#" download>Descargar</a>
+        </div>
+    </div>
+
+    <div class="app-layout">
+        <!-- Main Content -->
+        <main class="gallery-section">
+            <header class="glass-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <h1 class="neon-title">✨ ZARAMARINA</h1>
+                    <button id="install-app-btn" class="btn secondary" style="display: none; padding: 0.5rem 1rem; font-size: 0.8rem;">🔽 Instalar</button>
+                </div>
+                <div class="header-actions">
+                    <label class="btn primary upload-btn">
+                        Subir Archivo
+                        <input type="file" id="upload-input" accept="image/*,video/mp4" style="display: none;">
+                    </label>
+                    <button id="toggle-chat-btn" class="btn secondary">💬 Chat</button>
+                </div>
+            </header>
+            <div id="gallery-grid" class="gallery-grid">
+                <!-- Media items will be injected here -->
+            </div>
+        </main>
+
+        <!-- Sidebar Chat -->
+        <aside id="chat-sidebar" class="chat-sidebar glass">
+            <div class="chat-header">
+                <h2>Chat Local</h2>
+                <button id="close-chat-btn" class="close-btn">&times;</button>
+            </div>
+            <div id="chat-messages" class="chat-messages">
+                <!-- Messages -->
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje...">
+                <button id="send-msg-btn" class="btn primary">Enviar</button>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Socket.io -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+            .then(() => console.log('Service Worker Registrado'));
+        }
+    </script>
+</body>
+</html>
