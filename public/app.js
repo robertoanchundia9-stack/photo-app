@@ -75,11 +75,13 @@ saveProfileBtn.addEventListener('click', () => {
 });
 
 // Load Media
+let currentMediaItems = [];
+
 async function loadMedia() {
     try {
         const res = await fetch('/api/media');
-        const media = await res.json();
-        renderGallery(media);
+        currentMediaItems = await res.json();
+        renderGallery(currentMediaItems);
     } catch (err) {
         console.error('Error fetching media:', err);
     }
@@ -169,8 +171,13 @@ closeChatBtn.addEventListener('click', () => {
 });
 
 // Socket Events
-socket.on('new_media', () => {
-    loadMedia(); // reload gallery
+socket.on('new_media', (fileObj) => {
+    if (fileObj && fileObj.url) {
+        currentMediaItems.unshift(fileObj);
+        renderGallery(currentMediaItems);
+    } else {
+        loadMedia(); // fallback
+    }
 });
 
 socket.on('chat_message', (msg) => {
