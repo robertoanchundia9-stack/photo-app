@@ -12,6 +12,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
+// In-memory likes storage
+const likesMap = {};
+
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -53,7 +56,8 @@ app.get('/api/media', async (req, res) => {
                 name: item.public_id,
                 url: item.secure_url,
                 type: item.resource_type === 'video' ? 'video' : 'image',
-                createdAt: new Date(item.created_at).getTime()
+                createdAt: new Date(item.created_at).getTime(),
+                likes: likesMap[item.public_id] || 0
             };
         });
         
@@ -101,6 +105,22 @@ io.on('connection', (socket) => {
             text: data.text,
             timestamp: Date.now()
         });
+    });
+
+    socket.on('toggle_like', (data) => {
+        if (!data || !data.id) return;
+        likesMap[data.id] = (likesMap[data.id] || 0) + 1;
+        io.emit('update_like', { id: data.id, likes: likesMap[data.id] });
+    });
+
+    socket.on('delete_media', async (data) => {
+        if (!data || !data.id) return;
+        try {
+            await cloudinary.uploader.destroy(data.id);
+            io.emit('media_deleted', { id: data.id });
+        } catch(err) {
+            console.error('Failed to delete media:', err);
+        }
     });
 
     socket.on('disconnect', () => {

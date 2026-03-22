@@ -299,3 +299,60 @@ input[type="text"]:focus {
     top: 10px;
     right: 15px;
 }
+
+/* Light Mode overrides */
+body.light-mode {
+    --bg-color: #f4f4f9;
+    --text-color: #222222;
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(0, 0, 0, 0.1);
+    --accent-color: #d900d9;
+    --secondary-accent: #009999;
+}
+body.light-mode .media-card { background: #e0e0e0; }
+body.light-mode .neon-title { text-shadow: none; color: #d900d9; font-weight: bold; }
+body.light-mode .chat-sidebar { background: rgba(0, 0, 0, 0.03); }
+body.light-mode .message { color: #333; background: rgba(0,0,0,0.08); }
+body.light-mode .message.self { color: white; background: var(--accent-color); }
+body.light-mode input[type="text"] { background: rgba(0,0,0,0.05); color: #333; }
+body.light-mode .modal-content { background: rgba(255, 255, 255, 0.95); color: #333; }
+body.light-mode .viewer-content { background: rgba(240, 240, 245, 0.95); }
+body.light-mode .close-btn { color: #333; }
+
+/* Overlays for Likes and Delete */
+.card-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.5rem;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none; /* Let clicks pass unless explicitly targeted */
+}
+.media-content {
+    width: 100%;
+    height: 100%;
+}
+.like-btn, .delete-btn {
+    pointer-events: auto;
+    background: rgba(255,255,255,0.2);
+    border: none;
+    border-radius: 20px;
+    padding: 0.4rem 0.8rem;
+    color: white;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    font-size: 0.9rem;
+    transition: transform 0.2s, background 0.2s;
+}
+.like-btn:hover, .delete-btn:hover {
+    transform: scale(1.1);
+    background: rgba(255,255,255,0.4);
+}
+.like-btn.liked {
+    color: #ff4d4d;
+    background: rgba(255,255,255,0.9);
+}

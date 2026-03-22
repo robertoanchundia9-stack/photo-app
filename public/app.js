@@ -22,7 +22,28 @@ const viewerMediaContainer = document.getElementById('viewer-media-container');
 const downloadBtn = document.getElementById('download-btn');
 
 const installAppBtn = document.getElementById('install-app-btn');
+const themeToggle = document.getElementById('theme-toggle');
+
 let deferredPrompt;
+
+// Theme Toggle
+let isLight = localStorage.getItem('photoApp_theme') === 'light';
+if (isLight) {
+    document.body.classList.add('light-mode');
+    themeToggle.innerText = '🌙 Oscuro';
+}
+themeToggle.addEventListener('click', () => {
+    isLight = !isLight;
+    if (isLight) {
+        document.body.classList.add('light-mode');
+        themeToggle.innerText = '🌙 Oscuro';
+        localStorage.setItem('photoApp_theme', 'light');
+    } else {
+        document.body.classList.remove('light-mode');
+        themeToggle.innerText = '☀️ Claro';
+        localStorage.setItem('photoApp_theme', 'dark');
+    }
+});
 
 // PWA Install Logic
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -92,16 +113,52 @@ function renderGallery(mediaItems) {
     mediaItems.forEach(item => {
         const div = document.createElement('div');
         div.className = 'media-card';
-        div.onclick = () => openViewer(item);
 
+        const mediaContainer = document.createElement('div');
+        mediaContainer.className = 'media-content';
+        mediaContainer.onclick = () => openViewer(item);
+        
         if (item.type === 'video') {
-            div.innerHTML = `
+            mediaContainer.innerHTML = `
                 <video src="${item.url}#t=0.1" preload="metadata"></video>
                 <div class="play-icon">▶️</div>
             `;
         } else {
-            div.innerHTML = `<img src="${item.url}" loading="lazy" alt="${item.name}">`;
+            mediaContainer.innerHTML = `<img src="${item.url}" loading="lazy" alt="${item.name}">`;
         }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'card-overlay';
+
+        const likeBtn = document.createElement('button');
+        likeBtn.className = 'like-btn';
+        let likesCount = item.likes || 0;
+        likeBtn.innerHTML = `❤️ <span class="like-count">${likesCount}</span>`;
+        likeBtn.onclick = (e) => {
+            e.stopPropagation();
+            socket.emit('toggle_like', { id: item.name });
+            item.likes = likesCount + 1;
+            likeBtn.innerHTML = `❤️ <span class="like-count">${item.likes}</span>`;
+            likeBtn.classList.add('liked');
+        };
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.innerHTML = '🗑️';
+        deleteBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (confirm('¿Seguro que quieres borrar esta foto para todos?')) {
+                socket.emit('delete_media', { id: item.name });
+                div.style.opacity = '0.5';
+                div.style.pointerEvents = 'none';
+            }
+        };
+
+        overlay.appendChild(likeBtn);
+        overlay.appendChild(deleteBtn);
+
+        div.appendChild(mediaContainer);
+        div.appendChild(overlay);
         galleryGrid.appendChild(div);
     });
 }
@@ -171,8 +228,22 @@ closeChatBtn.addEventListener('click', () => {
 });
 
 // Socket Events
+socket.on('update_like', (data) => {
+    const item = currentMediaItems.find(i => i.name === data.id);
+    if (item) {
+        item.likes = data.likes;
+        renderGallery(currentMediaItems);
+    }
+});
+
+socket.on('media_deleted', (data) => {
+    currentMediaItems = currentMediaItems.filter(i => i.name !== data.id);
+    renderGallery(currentMediaItems);
+});
+
 socket.on('new_media', (fileObj) => {
     if (fileObj && fileObj.url) {
+        fileObj.likes = 0;
         currentMediaItems.unshift(fileObj);
         renderGallery(currentMediaItems);
     } else {
@@ -211,6 +282,22 @@ chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') sendMessage();
 });
 
+function playChatSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.2, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.3);
+    } catch(e) {}
+}
+
 function appendMessage(msg, isSelf) {
     const div = document.createElement('div');
     div.className = `message ${isSelf ? 'self' : ''}`;
@@ -220,6 +307,8 @@ function appendMessage(msg, isSelf) {
     `;
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    if (!isSelf) playChatSound();
 }
 
 // Start
