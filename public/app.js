@@ -22,6 +22,11 @@ const closeViewerBtn = document.getElementById('close-viewer-btn');
 const viewerMediaContainer = document.getElementById('viewer-media-container');
 const downloadBtn = document.getElementById('download-btn');
 
+// Blog Specific Modals
+const blogPostModal = document.getElementById('blog-post-modal');
+const closeBlogModalBtn = document.getElementById('close-blog-modal-btn');
+const blogPostFullContent = document.getElementById('blog-post-full-content');
+
 const installAppBtn = document.getElementById('install-app-btn');
 const themeToggle = document.getElementById('theme-toggle');
 const fullscreenBtn = document.getElementById('fullscreen-btn');
@@ -78,6 +83,7 @@ saveProfileBtn.addEventListener('click', async () => {
     if (file) {
         const formData = new FormData();
         formData.append('mediaFile', file);
+        formData.append('userId', 'initial_setup'); 
         saveProfileBtn.innerText = 'Subiendo...';
         try {
             const res = await fetch('/api/upload', { method: 'POST', body: formData });
@@ -86,7 +92,8 @@ saveProfileBtn.addEventListener('click', async () => {
         } catch (err) { console.error('Upload failed', err); }
     }
 
-    userProfile = { firstName, lastName, fullName: `${firstName} ${lastName}`, photo: photoUrl };
+    const userId = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+    userProfile = { userId, firstName, lastName, fullName: `${firstName} ${lastName}`, photo: photoUrl };
     localStorage.setItem('photoApp_userProfile', JSON.stringify(userProfile));
     profileModal.classList.remove('active');
     socket.emit('user_join', { name: userProfile.fullName, photo: userProfile.photo });
@@ -96,10 +103,10 @@ saveProfileBtn.addEventListener('click', async () => {
 // --- CORE UTILITIES ---
 fullscreenBtn.addEventListener('click', () => {
     if (!document.fullscreenElement) {
-        document.documentElement.requestFullscreen();
+        document.documentElement.requestFullscreen().catch(() => {});
         fullscreenBtn.innerText = '🔳';
     } else {
-        document.exitFullscreen();
+        document.exitFullscreen().catch(() => {});
         fullscreenBtn.innerText = '📺';
     }
 });
@@ -126,6 +133,7 @@ async function loadMedia() {
 function renderGallery(mediaItems) {
     galleryGrid.innerHTML = '';
     mediaItems.forEach(item => {
+        const isOwner = userProfile && (item.userId === userProfile.userId);
         const div = document.createElement('div');
         div.className = 'media-card';
         div.innerHTML = `
@@ -134,7 +142,7 @@ function renderGallery(mediaItems) {
             </div>
             <div class="card-overlay">
                 <button class="like-btn" onclick="event.stopPropagation(); socket.emit('toggle_like', { id: '${item.name}' })">❤️ <span>${item.likes || 0}</span></button>
-                <button class="delete-btn" onclick="event.stopPropagation(); if(confirm('¿Borrar?')) socket.emit('delete_media', { id: '${item.name}' })">🗑️</button>
+                ${isOwner ? `<button class="delete-btn" onclick="event.stopPropagation(); if(confirm('¿Borrar?')) socket.emit('delete_media', { id: '${item.name}', userId: '${userProfile.userId}' })">🗑️</button>` : ''}
             </div>
         `;
         galleryGrid.appendChild(div);
@@ -154,9 +162,10 @@ closeViewerBtn.onclick = () => { viewerModal.classList.remove('active'); viewerM
 
 uploadInput.onchange = async (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !userProfile) return;
     const formData = new FormData();
     formData.append('mediaFile', file);
+    formData.append('userId', userProfile.userId);
     try { await fetch('/api/upload', { method: 'POST', body: formData }); } catch(err) { alert('Error'); }
     uploadInput.value = '';
 };
@@ -174,9 +183,39 @@ async function loadBlogPosts() {
 function renderBlogPosts() {
     blogFeed.innerHTML = '';
     currentBlogPosts.forEach(post => {
+        const isOwner = userProfile && (post.userId === userProfile.userId);
         const div = document.createElement('div');
-        div.className = 'blog-post';
+        div.className = 'blog-post summary';
+        div.onclick = () => openFullPost(post.id);
         div.innerHTML = `
+            <div class="blog-post-header">
+                <div class="blog-post-author-info">
+                    <img src="${post.authorPhoto || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}" class="blog-post-avatar">
+                    <div>
+                        <div class="blog-post-author">${post.author}</div>
+                        <div class="blog-post-time">${new Date(post.createdAt).toLocaleDateString()}</div>
+                    </div>
+                </div>
+                ${isOwner ? `<button class="blog-post-menu-btn" onclick="event.stopPropagation(); socket.emit('delete_blog_post', { postId: '${post.id}', userId: '${userProfile.userId}' })">🗑️</button>` : ''}
+            </div>
+            <div class="blog-post-content">${post.text}</div>
+            ${post.media ? `<div class="blog-post-media">${post.media.type === 'video' ? `<video src="${post.media.url}#t=0.5"></video>` : `<img src="${post.media.url}" loading="lazy">`}</div>` : ''}
+            <div class="blog-actions">
+                <button class="blog-action-btn" onclick="event.stopPropagation(); socket.emit('blog_toggle_like', { postId: '${post.id}' })">❤️ <span>${post.likes || 0}</span></button>
+                <button class="blog-action-btn">💬 <span>${post.comments?.length || 0}</span></button>
+            </div>
+        `;
+        blogFeed.appendChild(div);
+    });
+}
+
+function openFullPost(postId) {
+    const post = currentBlogPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const isOwner = userProfile && (post.userId === userProfile.userId);
+    blogPostFullContent.innerHTML = `
+        <div class="blog-post full-view">
             <div class="blog-post-header">
                 <div class="blog-post-author-info">
                     <img src="${post.authorPhoto || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}" class="blog-post-avatar">
@@ -185,38 +224,45 @@ function renderBlogPosts() {
                         <div class="blog-post-time">${new Date(post.createdAt).toLocaleString()}</div>
                     </div>
                 </div>
-                <button class="blog-post-menu-btn" onclick="socket.emit('delete_blog_post', { postId: '${post.id}' })">🗑️</button>
+                ${isOwner ? `<button class="blog-post-menu-btn" onclick="socket.emit('delete_blog_post', { postId: '${post.id}', userId: '${userProfile.userId}' }); blogPostModal.classList.remove('active');">🗑️ Borrar</button>` : ''}
             </div>
-            <div class="blog-post-content">${post.text}</div>
-            ${post.media ? `<div class="blog-post-media">${post.media.type === 'video' ? `<video src="${post.media.url}" controls></video>` : `<img src="${post.media.url}">`}</div>` : ''}
+            <div class="blog-post-content" style="display:block; white-space: pre-wrap;">${post.text}</div>
+            ${post.media ? `<div class="blog-post-media" style="margin-top: 1rem;">${post.media.type === 'video' ? `<video src="${post.media.url}" controls autoplay></video>` : `<img src="${post.media.url}">`}</div>` : ''}
             <div class="blog-actions">
-                <button class="blog-action-btn" onclick="socket.emit('blog_toggle_like', { postId: '${post.id}' })">❤️ <span>${post.likes || 0}</span></button>
-                <button class="blog-action-btn" onclick="document.getElementById('comments-${post.id}').classList.toggle('hidden')">💬 <span>${post.comments?.length || 0}</span></button>
+                <button class="blog-action-btn" onclick="socket.emit('blog_toggle_like', { postId: '${post.id}' })">❤️ <span>${post.likes || 0}</span> Me gusta</button>
             </div>
-            <div class="comments-section hidden" id="comments-${post.id}">
-                <div class="comment-list">
+            <div class="comments-section">
+                <h4>Comentarios</h4>
+                <div class="comment-list" id="modal-comment-list">
                     ${(post.comments || []).map(c => `<div class="comment-item"><span class="comment-author">${c.author}:</span> ${c.text}</div>`).join('')}
                 </div>
                 <div class="comment-input-area">
-                    <input type="text" placeholder="Comentar..." onkeypress="if(event.key==='Enter' && this.value.trim()){ socket.emit('blog_add_comment', { postId: '${post.id}', author: userProfile.fullName, text: this.value }); this.value=''; }">
+                    <input type="text" placeholder="Comentar..." id="modal-comment-input" onkeypress="if(event.key==='Enter' && this.value.trim()){ socket.emit('blog_add_comment', { postId: '${post.id}', author: userProfile.fullName, text: this.value }); this.value=''; }">
+                    <button class="btn primary" onclick="const input = document.getElementById('modal-comment-input'); if(input.value.trim()){ socket.emit('blog_add_comment', { postId: '${post.id}', author: userProfile.fullName, text: input.value }); input.value=''; }">Enviar</button>
                 </div>
             </div>
-        `;
-        blogFeed.appendChild(div);
-    });
+        </div>
+    `;
+    blogPostModal.classList.add('active');
 }
+
+closeBlogModalBtn.onclick = () => {
+    blogPostModal.classList.remove('active');
+    blogPostFullContent.innerHTML = '';
+};
 
 blogMediaInput.onchange = (e) => { blogMediaName.innerText = e.target.files[0]?.name || ''; };
 
 submitPostBtn.onclick = async () => {
     const text = blogTextInput.value.trim();
     const file = blogMediaInput.files[0];
-    if (!text && !file) return;
+    if ((!text && !file) || !userProfile) return;
 
     const formData = new FormData();
     formData.append('text', text);
     formData.append('author', userProfile.fullName);
     formData.append('authorPhoto', userProfile.photo);
+    formData.append('userId', userProfile.userId);
     if (file) formData.append('mediaFile', file);
 
     submitPostBtn.disabled = true;
@@ -265,9 +311,42 @@ closeChatBtn.onclick = () => navChat.click();
 socket.on('update_like', data => { const item = currentMediaItems.find(i => i.name === data.id); if(item){ item.likes = data.likes; renderGallery(currentMediaItems); }});
 socket.on('chat_message', msg => appendMessage(msg, false));
 socket.on('user_joined', data => { const div = document.createElement('div'); div.className='chat-notice'; div.innerText=`${data.name} se unió`; chatMessages.appendChild(div); });
-socket.on('blog_update_likes', data => { const post = currentBlogPosts.find(p => p.id === data.postId); if(post){ post.likes = data.likes; renderBlogPosts(); }});
-socket.on('blog_new_comment', data => { const post = currentBlogPosts.find(p => p.id === data.postId); if(post){ if(!post.comments) post.comments = []; post.comments.push(data.comment); renderBlogPosts(); }});
-socket.on('blog_post_deleted', data => { currentBlogPosts = currentBlogPosts.filter(p => p.id !== data.postId); renderBlogPosts(); });
+
+socket.on('blog_update_likes', data => {
+    const post = currentBlogPosts.find(p => p.id === data.postId);
+    if(post){
+        post.likes = data.likes;
+        renderBlogPosts();
+        if(blogPostModal.classList.contains('active') && blogPostFullContent.querySelector('.blog-post')?.parentElement) {
+             const likeSpan = blogPostFullContent.querySelector('.blog-action-btn span');
+             if(likeSpan) likeSpan.innerText = data.likes;
+        }
+    }
+});
+
+socket.on('blog_new_comment', data => {
+    const post = currentBlogPosts.find(p => p.id === data.postId);
+    if(post){
+        if(!post.comments) post.comments = [];
+        post.comments.push(data.comment);
+        renderBlogPosts();
+        const commentList = document.getElementById('modal-comment-list');
+        if(commentList && blogPostModal.classList.contains('active')) {
+             const div = document.createElement('div');
+             div.className = 'comment-item';
+             div.innerHTML = `<span class="comment-author">${data.comment.author}:</span> ${data.comment.text}`;
+             commentList.appendChild(div);
+             commentList.scrollTop = commentList.scrollHeight;
+        }
+    }
+});
+
+socket.on('blog_post_deleted', data => {
+    currentBlogPosts = currentBlogPosts.filter(p => p.id !== data.postId);
+    renderBlogPosts();
+    if(blogPostModal.classList.contains('active')) blogPostModal.classList.remove('active');
+});
+
 socket.on('new_media', () => loadMedia());
 socket.on('media_deleted', () => loadMedia());
 socket.on('new_blog_post', post => { currentBlogPosts.unshift(post); if(!blogSection.classList.contains('hidden')) renderBlogPosts(); });
