@@ -29,9 +29,12 @@ const blogPostFullContent = document.getElementById('blog-post-full-content');
 const themeToggle = document.getElementById('theme-toggle');
 const fullscreenBtn = document.getElementById('fullscreen-btn');
 
-// Blog Elements
+// Sections
 const gallerySection = document.getElementById('gallery-section');
 const blogSection = document.getElementById('blog-section');
+const usersSection = document.getElementById('users-section');
+
+// Blog Elements
 const backToGalleryBtn = document.getElementById('back-to-gallery-btn');
 const blogTextInput = document.getElementById('blog-text-input');
 const blogMediaInput = document.getElementById('blog-media-input');
@@ -39,11 +42,15 @@ const blogMediaName = document.getElementById('blog-media-name');
 const submitPostBtn = document.getElementById('submit-post-btn');
 const blogFeed = document.getElementById('blog-feed');
 
+// Users Elements
+const usersGrid = document.getElementById('users-grid');
+
 // Bottom Nav Elements
 const navGallery = document.getElementById('nav-gallery');
 const navBlog = document.getElementById('nav-blog');
+const navUsers = document.getElementById('nav-users');
 const navChat = document.getElementById('nav-chat');
-const navItems = [navGallery, navBlog, navChat];
+const navItems = [navGallery, navBlog, navUsers, navChat];
 
 let userProfile = null;
 
@@ -54,13 +61,14 @@ function init() {
         userProfile = JSON.parse(savedProfile);
         profileModal.classList.remove('active');
         socket.emit('user_join', { name: userProfile.fullName, photo: userProfile.photo });
+        registerUserOnServer(userProfile); // Ensure we are in the list
         loadMedia();
     } else {
         profileModal.classList.add('active');
     }
 }
 
-// --- PROFILE ---
+// --- PROFILE & USER DIRECTORY ---
 profileImageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -71,6 +79,20 @@ profileImageInput.addEventListener('change', (e) => {
         reader.readAsDataURL(file);
     }
 });
+
+async function registerUserOnServer(profile) {
+    try {
+        await fetch('/api/register-user', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                userId: profile.userId,
+                fullName: profile.fullName,
+                photo: profile.photo
+            })
+        });
+    } catch(e) { console.error('Register failed', e); }
+}
 
 saveProfileBtn.addEventListener('click', async () => {
     const firstName = firstNameInput.value.trim();
@@ -95,11 +117,34 @@ saveProfileBtn.addEventListener('click', async () => {
     userProfile = { userId, firstName, lastName, fullName: `${firstName} ${lastName}`, photo: photoUrl };
     localStorage.setItem('photoApp_userProfile', JSON.stringify(userProfile));
     
+    registerUserOnServer(userProfile);
+    
     profileModal.classList.remove('active');
     socket.emit('user_join', { name: userProfile.fullName, photo: userProfile.photo });
     loadMedia();
     saveProfileBtn.innerText = 'Empezar';
 });
+
+async function loadUsers() {
+    try {
+        const res = await fetch('/api/users');
+        const users = await res.json();
+        renderUsers(users);
+    } catch(e) { console.error(e); }
+}
+
+function renderUsers(users) {
+    usersGrid.innerHTML = '';
+    users.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'user-card';
+        div.innerHTML = `
+            <img src="${u.photo}" class="user-card-avatar" alt="${u.fullName}">
+            <div class="user-card-name">${u.fullName}</div>
+        `;
+        usersGrid.appendChild(div);
+    });
+}
 
 // --- CORE UTILITIES ---
 fullscreenBtn.onclick = () => {
@@ -306,17 +351,30 @@ function updateActiveNav(activeItem) {
     activeItem.classList.add('active');
 }
 
+function hideAllSections() {
+    gallerySection.classList.add('hidden');
+    blogSection.classList.add('hidden');
+    usersSection.classList.add('hidden');
+}
+
 navGallery.onclick = () => { 
-    blogSection.classList.add('hidden'); 
+    hideAllSections();
     gallerySection.classList.remove('hidden'); 
     updateActiveNav(navGallery); 
 };
 
 navBlog.onclick = () => { 
-    gallerySection.classList.add('hidden'); 
+    hideAllSections();
     blogSection.classList.remove('hidden'); 
     loadBlogPosts(); 
     updateActiveNav(navBlog); 
+};
+
+navUsers.onclick = () => {
+    hideAllSections();
+    usersSection.classList.remove('hidden');
+    loadUsers();
+    updateActiveNav(navUsers);
 };
 
 navChat.onclick = () => {
@@ -327,7 +385,10 @@ navChat.onclick = () => {
         updateActiveNav(navChat);
     } else {
         chatSidebar.style.position = 'absolute'; 
-        updateActiveNav(gallerySection.classList.contains('hidden') ? navBlog : navGallery);
+        let currentActive = navGallery;
+        if (!blogSection.classList.contains('hidden')) currentActive = navBlog;
+        if (!usersSection.classList.contains('hidden')) currentActive = navUsers;
+        updateActiveNav(currentActive);
     }
 };
 

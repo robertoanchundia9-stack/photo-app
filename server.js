@@ -14,8 +14,20 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 // In-memory likes storage
 const likesMap = {};
-// In-memory blog posts storage
-const blogPosts = [];
+// Persistent blog posts storage
+const blogFile = path.join(__dirname, 'blog.json');
+let blogPosts = [];
+if (fs.existsSync(blogFile)) {
+    try { blogPosts = JSON.parse(fs.readFileSync(blogFile, 'utf8')); } catch(e) { blogPosts = []; }
+}
+function saveBlog() { fs.writeFileSync(blogFile, JSON.stringify(blogPosts, null, 2)); }
+// Persistent users storage
+const usersFile = path.join(__dirname, 'users.json');
+let allUsers = [];
+if (fs.existsSync(usersFile)) {
+    try { allUsers = JSON.parse(fs.readFileSync(usersFile, 'utf8')); } catch(e) { allUsers = []; }
+}
+function saveUsers() { fs.writeFileSync(usersFile, JSON.stringify(allUsers, null, 2)); }
 
 // Configure Cloudinary
 cloudinary.config({
@@ -142,9 +154,32 @@ app.post('/api/blog', upload.single('mediaFile'), (req, res) => {
     };
 
     blogPosts.unshift(post); // newest first
+    saveBlog();
     io.emit('new_blog_post', post);
     
     res.json({ success: true, post });
+});
+
+// API: Get Users List
+app.get('/api/users', (req, res) => {
+    res.json(allUsers);
+});
+
+// API: Register/Update User
+app.post('/api/register-user', (req, res) => {
+    const { userId, fullName, photo } = req.body;
+    if (!userId) return res.status(400).json({ error: 'userId required' });
+    
+    const existingIndex = allUsers.findIndex(u => u.userId === userId);
+    const userData = { userId, fullName, photo, lastSeen: Date.now() };
+    
+    if (existingIndex !== -1) {
+        allUsers[existingIndex] = userData;
+    } else {
+        allUsers.push(userData);
+    }
+    saveUsers();
+    res.json({ success: true });
 });
 
 // Socket.io
@@ -175,6 +210,7 @@ io.on('connection', (socket) => {
         const post = blogPosts.find(p => p.id === data.postId);
         if (post) {
             post.likes = (post.likes || 0) + 1;
+            saveBlog();
             io.emit('blog_update_likes', { postId: post.id, likes: post.likes });
         }
     });
@@ -190,6 +226,7 @@ io.on('connection', (socket) => {
                 createdAt: Date.now()
             };
             post.comments.push(comment);
+            saveBlog();
             io.emit('blog_new_comment', { postId: post.id, comment });
         }
     });
@@ -212,6 +249,7 @@ io.on('connection', (socket) => {
                 }
             }
             blogPosts.splice(index, 1);
+            saveBlog();
             io.emit('blog_post_deleted', { postId: data.postId });
         }
     });
