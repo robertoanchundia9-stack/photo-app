@@ -124,7 +124,7 @@ app.post('/api/blog', upload.single('mediaFile'), (req, res) => {
     res.json({ success: true, post });
 });
 
-// Socket.io for Chat
+// Socket.io
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
     
@@ -136,7 +136,6 @@ io.on('connection', (socket) => {
         socket.broadcast.emit('chat_message', {
             id: Date.now() + Math.random(),
             sender: data.sender,
-            avatar: data.avatar,
             text: data.text,
             timestamp: Date.now()
         });
@@ -146,6 +145,46 @@ io.on('connection', (socket) => {
         if (!data || !data.id) return;
         likesMap[data.id] = (likesMap[data.id] || 0) + 1;
         io.emit('update_like', { id: data.id, likes: likesMap[data.id] });
+    });
+
+    // Blog interactions
+    socket.on('blog_toggle_like', (data) => {
+        const post = blogPosts.find(p => p.id === data.postId);
+        if (post) {
+            post.likes = (post.likes || 0) + 1;
+            io.emit('blog_update_likes', { postId: post.id, likes: post.likes });
+        }
+    });
+
+    socket.on('blog_add_comment', (data) => {
+        const post = blogPosts.find(p => p.id === data.postId);
+        if (post) {
+            if (!post.comments) post.comments = [];
+            const comment = {
+                id: Date.now(),
+                author: data.author,
+                text: data.text,
+                createdAt: Date.now()
+            };
+            post.comments.push(comment);
+            io.emit('blog_new_comment', { postId: post.id, comment });
+        }
+    });
+
+    socket.on('delete_blog_post', async (data) => {
+        const index = blogPosts.findIndex(p => p.id === data.postId);
+        if (index !== -1) {
+            const post = blogPosts[index];
+            if (post.media && post.media.name) {
+                try {
+                    await cloudinary.uploader.destroy(post.media.name);
+                } catch(err) {
+                    console.error('Failed to delete media:', err);
+                }
+            }
+            blogPosts.splice(index, 1);
+            io.emit('blog_post_deleted', { postId: data.postId });
+        }
     });
 
     socket.on('delete_media', async (data) => {

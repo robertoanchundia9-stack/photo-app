@@ -15,9 +15,20 @@
     <div id="profile-modal" class="modal active">
         <div class="modal-content glass">
             <h2>Bienvenido</h2>
-            <p>Elige un nombre para empezar a chatear.</p>
-            <input type="text" id="username-input" placeholder="Tu nombre...">
-            <button id="save-profile-btn" class="btn primary">Entrar</button>
+            <p>Configura tu perfil para empezar.</p>
+            <div class="profile-setup-grid">
+                <div class="profile-pic-setup">
+                    <label for="profile-pic-input" class="profile-pic-label" id="profile-pic-preview">
+                        <span>📷</span>
+                    </label>
+                    <input type="file" id="profile-pic-input" accept="image/*" style="display: none;">
+                </div>
+                <div class="profile-info-setup">
+                    <input type="text" id="firstname-input" placeholder="Nombre">
+                    <input type="text" id="lastname-input" placeholder="Apellido">
+                </div>
+            </div>
+            <button id="save-profile-btn" class="btn primary">Empezar</button>
         </div>
     </div>
 
@@ -34,10 +45,13 @@
         <!-- Main Content (Gallery) -->
         <main id="gallery-section" class="gallery-section">
             <header class="glass-header">
-                <div style="display: flex; align-items: center; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
                     <h1 class="neon-title">✨ Zara Marina Varela</h1>
-                    <button id="theme-toggle" class="btn secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">☀️ Claro</button>
-                    <button id="install-app-btn" class="btn secondary" style="display: none; padding: 0.5rem 1rem; font-size: 0.8rem;">🔽 Instalar</button>
+                    <div class="header-tools">
+                        <button id="theme-toggle" class="btn secondary" title="Cambiar Tema">☀️</button>
+                        <button id="fullscreen-btn" class="btn secondary" title="Pantalla Completa">📺</button>
+                        <button id="install-app-btn" class="btn secondary" style="display: none;">🔽</button>
+                    </div>
                 </div>
                 <div class="header-actions">
                     <label class="btn primary upload-btn">
