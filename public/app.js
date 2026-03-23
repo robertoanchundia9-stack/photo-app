@@ -10,7 +10,6 @@ const galleryGrid = document.getElementById('gallery-grid');
 const uploadInput = document.getElementById('upload-input');
 
 const chatSidebar = document.getElementById('chat-sidebar');
-const toggleChatBtn = document.getElementById('toggle-chat-btn');
 const closeChatBtn = document.getElementById('close-chat-btn');
 const chatMessages = document.getElementById('chat-messages');
 const chatInput = document.getElementById('chat-input');
@@ -23,6 +22,22 @@ const downloadBtn = document.getElementById('download-btn');
 
 const installAppBtn = document.getElementById('install-app-btn');
 const themeToggle = document.getElementById('theme-toggle');
+
+// Blog Elements
+const gallerySection = document.getElementById('gallery-section');
+const blogSection = document.getElementById('blog-section');
+const backToGalleryBtn = document.getElementById('back-to-gallery-btn');
+const blogTextInput = document.getElementById('blog-text-input');
+const blogMediaInput = document.getElementById('blog-media-input');
+const blogMediaName = document.getElementById('blog-media-name');
+const submitPostBtn = document.getElementById('submit-post-btn');
+const blogFeed = document.getElementById('blog-feed');
+
+// Bottom Nav Elements
+const navGallery = document.getElementById('nav-gallery');
+const navBlog = document.getElementById('nav-blog');
+const navChat = document.getElementById('nav-chat');
+const navItems = [navGallery, navBlog, navChat];
 
 let deferredPrompt;
 
@@ -47,26 +62,15 @@ themeToggle.addEventListener('click', () => {
 
 // PWA Install Logic
 window.addEventListener('beforeinstallprompt', (e) => {
-    // Prevent Chrome 67 and earlier from automatically showing the prompt
     e.preventDefault();
-    // Stash the event so it can be triggered later.
     deferredPrompt = e;
-    // Update UI to notify the user they can add to home screen
     installAppBtn.style.display = 'inline-block';
 });
 
 installAppBtn.addEventListener('click', async () => {
     if (deferredPrompt) {
-        // Show the install prompt
         deferredPrompt.prompt();
-        // Wait for the user to respond to the prompt
         const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            console.log('User accepted the install prompt');
-        } else {
-            console.log('User dismissed the install prompt');
-        }
-        // We've used the prompt, and can't use it again, throw it away
         deferredPrompt = null;
         installAppBtn.style.display = 'none';
     }
@@ -163,6 +167,59 @@ function renderGallery(mediaItems) {
     });
 }
 
+// Blog Functions
+let currentBlogPosts = [];
+
+async function loadBlogPosts() {
+    try {
+        const res = await fetch('/api/blog');
+        currentBlogPosts = await res.json();
+        renderBlogPosts();
+    } catch(err) {
+        console.error('Error fetching blog posts:', err);
+    }
+}
+
+function renderBlogPosts() {
+    blogFeed.innerHTML = '';
+    currentBlogPosts.forEach(post => {
+        const div = document.createElement('div');
+        div.className = 'blog-post';
+
+        const header = document.createElement('div');
+        header.className = 'blog-post-header';
+        
+        const date = new Date(post.createdAt);
+        const timeString = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+        header.innerHTML = `
+            <span class="blog-post-author">${post.author}</span>
+            <span class="blog-post-time">${timeString}</span>
+        `;
+        div.appendChild(header);
+
+        if (post.text) {
+            const content = document.createElement('div');
+            content.className = 'blog-post-content';
+            content.innerText = post.text;
+            div.appendChild(content);
+        }
+
+        if (post.media) {
+            const mediaDiv = document.createElement('div');
+            mediaDiv.className = 'blog-post-media';
+            if (post.media.type === 'video') {
+                mediaDiv.innerHTML = `<video src="${post.media.url}" controls></video>`;
+            } else {
+                mediaDiv.innerHTML = `<img src="${post.media.url}" loading="lazy" alt="Blog media">`;
+            }
+            div.appendChild(mediaDiv);
+        }
+
+        blogFeed.appendChild(div);
+    });
+}
+
 // Viewer Modals
 function openViewer(item) {
     viewerMediaContainer.innerHTML = '';
@@ -186,7 +243,7 @@ function openViewer(item) {
 
 closeViewerBtn.addEventListener('click', () => {
     viewerModal.classList.remove('active');
-    viewerMediaContainer.innerHTML = ''; // stop videos
+    viewerMediaContainer.innerHTML = '';
 });
 
 // Upload
@@ -197,34 +254,120 @@ uploadInput.addEventListener('change', async (e) => {
     const formData = new FormData();
     formData.append('mediaFile', file);
 
-    const prevText = document.querySelector('.upload-btn').innerText;
-    document.querySelector('.upload-btn').innerText = 'Subiendo...';
+    const uploadBtnLabel = document.querySelector('.upload-btn');
+    const originalText = uploadBtnLabel.childNodes[0].nodeValue;
+    uploadBtnLabel.childNodes[0].nodeValue = 'Subiendo... ';
 
     try {
         await fetch('/api/upload', {
             method: 'POST',
             body: formData
         });
-        // new_media event updates UI via socket
     } catch (err) {
         console.error('Upload failed', err);
         alert('Error al subir el archivo');
     } finally {
-        document.querySelector('.upload-btn').innerText = 'Subir Archivo';
-        uploadInput.value = ''; // reset
+        uploadBtnLabel.childNodes[0].nodeValue = originalText;
+        uploadInput.value = '';
     }
 });
 
-// Chat Toggles
-toggleChatBtn.addEventListener('click', () => {
-    chatSidebar.classList.remove('hidden');
-    chatSidebar.style.visibility = 'visible';
-    chatSidebar.style.width = '350px';
-    chatSidebar.style.position = 'relative'; 
+// Blog Upload & UI
+blogMediaInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+        blogMediaName.innerText = e.target.files[0].name;
+    } else {
+        blogMediaName.innerText = '';
+    }
 });
+
+submitPostBtn.addEventListener('click', async () => {
+    const text = blogTextInput.value.trim();
+    const file = blogMediaInput.files[0];
+
+    if (!text && !file) {
+        alert('Escribe algo o adjunta un archivo para publicar.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('text', text);
+    formData.append('author', username || 'Anónimo');
+    if (file) {
+        formData.append('mediaFile', file);
+    }
+
+    const prevText = submitPostBtn.innerText;
+    submitPostBtn.innerText = 'Publicando...';
+
+    try {
+        await fetch('/api/blog', {
+            method: 'POST',
+            body: formData
+        });
+        blogTextInput.value = '';
+        blogMediaInput.value = '';
+        blogMediaName.innerText = '';
+    } catch (err) {
+        console.error('Failed to post', err);
+        alert('Error al publicar');
+    } finally {
+        submitPostBtn.innerText = prevText;
+    }
+});
+
+// Navigation Logic
+function updateActiveNav(activeItem) {
+    navItems.forEach(item => item.classList.remove('active'));
+    activeItem.classList.add('active');
+}
+
+navGallery.addEventListener('click', () => {
+    blogSection.classList.add('hidden');
+    gallerySection.classList.remove('hidden');
+    updateActiveNav(navGallery);
+});
+
+navBlog.addEventListener('click', () => {
+    gallerySection.classList.add('hidden');
+    blogSection.classList.remove('hidden');
+    loadBlogPosts();
+    updateActiveNav(navBlog);
+});
+
+backToGalleryBtn?.addEventListener('click', () => {
+    blogSection.classList.add('hidden');
+    gallerySection.classList.remove('hidden');
+    updateActiveNav(navGallery);
+});
+
+navChat.addEventListener('click', () => {
+    const isHidden = chatSidebar.classList.contains('hidden');
+    if (isHidden) {
+        chatSidebar.classList.remove('hidden');
+        chatSidebar.style.visibility = 'visible';
+        chatSidebar.style.width = '350px';
+        chatSidebar.style.position = 'relative'; 
+        updateActiveNav(navChat);
+    } else {
+        chatSidebar.classList.add('hidden');
+        chatSidebar.style.position = 'absolute';
+        if (gallerySection.classList.contains('hidden')) {
+            updateActiveNav(navBlog);
+        } else {
+            updateActiveNav(navGallery);
+        }
+    }
+});
+
 closeChatBtn.addEventListener('click', () => {
     chatSidebar.classList.add('hidden');
     chatSidebar.style.position = 'absolute';
+    if (gallerySection.classList.contains('hidden')) {
+        updateActiveNav(navBlog);
+    } else {
+        updateActiveNav(navGallery);
+    }
 });
 
 // Socket Events
@@ -247,7 +390,7 @@ socket.on('new_media', (fileObj) => {
         currentMediaItems.unshift(fileObj);
         renderGallery(currentMediaItems);
     } else {
-        loadMedia(); // fallback
+        loadMedia();
     }
 });
 
@@ -264,6 +407,13 @@ socket.on('user_joined', (data) => {
     div.innerText = `${data.name} se unió al chat`;
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
+});
+
+socket.on('new_blog_post', (post) => {
+    currentBlogPosts.unshift(post);
+    if (!blogSection.classList.contains('hidden')) {
+        renderBlogPosts();
+    }
 });
 
 // Send Chat Message
@@ -307,14 +457,11 @@ function appendMessage(msg, isSelf) {
     `;
     chatMessages.appendChild(div);
     chatMessages.scrollTop = chatMessages.scrollHeight;
-    
     if (!isSelf) playChatSound();
 }
 
-// Start
 init();
 
-// Mobile sidebar default
 if (window.innerWidth < 768) {
     chatSidebar.classList.add('hidden');
 }

@@ -14,6 +14,8 @@ const io = new Server(server, { cors: { origin: '*' } });
 
 // In-memory likes storage
 const likesMap = {};
+// In-memory blog posts storage
+const blogPosts = [];
 
 // Configure Cloudinary
 cloudinary.config({
@@ -87,6 +89,39 @@ app.post('/api/upload', upload.single('mediaFile'), (req, res) => {
     io.emit('new_media', fileObj);
     
     res.json({ success: true, file: fileObj });
+});
+
+// API: Get Blog Posts
+app.get('/api/blog', (req, res) => {
+    res.json(blogPosts);
+});
+
+// API: Create Blog Post
+app.post('/api/blog', upload.single('mediaFile'), (req, res) => {
+    const { text, author } = req.body;
+    let fileObj = null;
+
+    if (req.file) {
+        const isVideo = req.file.mimetype && req.file.mimetype.startsWith('video');
+        fileObj = {
+            name: req.file.filename,
+            url: req.file.path,
+            type: isVideo ? 'video' : 'image'
+        };
+    }
+
+    const post = {
+        id: Date.now() + '-' + Math.round(Math.random() * 1000),
+        text: text || '',
+        author: author || 'Anónimo',
+        media: fileObj,
+        createdAt: Date.now()
+    };
+
+    blogPosts.unshift(post); // newest first
+    io.emit('new_blog_post', post);
+    
+    res.json({ success: true, post });
 });
 
 // Socket.io for Chat
