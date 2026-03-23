@@ -29,15 +29,30 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Cloudinary Storage Setup
-const storage = new CloudinaryStorage({
+// Cloudinary Storage Setup - Allowing dynamic params for userId
+// Gallery Storage
+const galleryStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: {
+  params: async (req, file) => ({
     folder: 'photo-app',
-    resource_type: 'auto', // supports both images and video
-    allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'mp4', 'mov']
-  },
+    resource_type: 'auto',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'mp4', 'mov'],
+    context: { userId: req.body.userId || 'anonymous' }
+  }),
 });
-const upload = multer({ storage: storage });
+
+// Profile Storage (No Socket Emit)
+const profileStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => ({
+    folder: 'photo-app-profiles',
+    resource_type: 'image',
+    allowed_formats: ['jpg', 'png', 'jpeg'],
+  }),
+});
+
+const upload = multer({ storage: galleryStorage });
+const profileUpload = multer({ storage: profileStorage });
 
 // API: Get Media
 app.get('/api/media', async (req, res) => {
@@ -49,6 +64,7 @@ app.get('/api/media', async (req, res) => {
 
         const { resources } = await cloudinary.search
             .expression('folder:photo-app')
+            .with_field('context')
             .sort_by('created_at', 'desc')
             .max_results(100)
             .execute();
@@ -59,7 +75,8 @@ app.get('/api/media', async (req, res) => {
                 url: item.secure_url,
                 type: item.resource_type === 'video' ? 'video' : 'image',
                 createdAt: new Date(item.created_at).getTime(),
-                likes: likesMap[item.public_id] || 0
+                likes: likesMap[item.public_id] || 0,
+                userId: item.context?.userId || 'anonymous'
             };
         });
         
@@ -70,25 +87,27 @@ app.get('/api/media', async (req, res) => {
     }
 });
 
-// API: Upload Media
+// API: Upload Media (GALLERY)
 app.post('/api/upload', upload.single('mediaFile'), (req, res) => {
-    if (!req.file) {
-        return res.status(400).json({ error: 'No file uploaded' });
-    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
     
-    // Cloudinary returns the full URL in `req.file.path`
     const isVideo = req.file.mimetype && req.file.mimetype.startsWith('video');
     const fileObj = {
         name: req.file.filename,
         url: req.file.path,
         type: isVideo ? 'video' : 'image',
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        userId: req.body.userId || 'anonymous'
     };
     
-    // Notify clients to refresh
     io.emit('new_media', fileObj);
-    
     res.json({ success: true, file: fileObj });
+});
+
+// API: Upload Profile Photo (PRIVATE)
+app.post('/api/profile-photo', profileUpload.single('mediaFile'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    res.json({ url: req.file.path });
 });
 
 // API: Get Blog Posts
@@ -114,8 +133,12 @@ app.post('/api/blog', upload.single('mediaFile'), (req, res) => {
         id: Date.now() + '-' + Math.round(Math.random() * 1000),
         text: text || '',
         author: author || 'Anónimo',
+        authorPhoto: req.body.authorPhoto,
+        userId: req.body.userId || 'anonymous',
         media: fileObj,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        likes: 0,
+        comments: []
     };
 
     blogPosts.unshift(post); // newest first
@@ -175,6 +198,12 @@ io.on('connection', (socket) => {
         const index = blogPosts.findIndex(p => p.id === data.postId);
         if (index !== -1) {
             const post = blogPosts[index];
+            // Validate Ownership
+            if (post.userId !== data.userId) {
+                console.log('Unauthorized delete attempt');
+                return;
+            }
+
             if (post.media && post.media.name) {
                 try {
                     await cloudinary.uploader.destroy(post.media.name);
@@ -188,8 +217,17 @@ io.on('connection', (socket) => {
     });
 
     socket.on('delete_media', async (data) => {
-        if (!data || !data.id) return;
+        if (!data || !data.id || !data.userId) return;
         try {
+            // Verify ownership in Cloudinary metadata
+            const res = await cloudinary.api.resource(data.id);
+            const ownerId = res.context && res.context.custom ? res.context.custom.userId : 'anonymous';
+            
+            if (ownerId !== data.userId) {
+                console.log('Unauthorized media delete attempt');
+                return;
+            }
+
             await cloudinary.uploader.destroy(data.id);
             io.emit('media_deleted', { id: data.id });
         } catch(err) {
