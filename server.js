@@ -28,6 +28,7 @@ if (fs.existsSync(usersFile)) {
     try { allUsers = JSON.parse(fs.readFileSync(usersFile, 'utf8')); } catch(e) { allUsers = []; }
 }
 function saveUsers() { fs.writeFileSync(usersFile, JSON.stringify(allUsers, null, 2)); }
+const activeSockets = {}; // socket.id -> userId
 
 // Configure Cloudinary
 cloudinary.config({
@@ -162,7 +163,11 @@ app.post('/api/blog', upload.single('mediaFile'), (req, res) => {
 
 // API: Get Users List
 app.get('/api/users', (req, res) => {
-    res.json(allUsers);
+    const usersWithStatus = allUsers.map(u => ({
+        ...u,
+        isOnline: Object.values(activeSockets).includes(u.userId)
+    }));
+    res.json(usersWithStatus);
 });
 
 // API: Register/Update User
@@ -187,6 +192,10 @@ io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
     
     socket.on('user_join', (data) => {
+        if (data.userId) {
+            activeSockets[socket.id] = data.userId;
+            io.emit('user_status_change', { userId: data.userId, status: 'online' });
+        }
         socket.broadcast.emit('user_joined', { name: data.name });
     });
 
@@ -275,6 +284,15 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
+        const userId = activeSockets[socket.id];
+        if (userId) {
+            delete activeSockets[socket.id];
+            // Check if user has other active connections
+            const stillOnline = Object.values(activeSockets).includes(userId);
+            if (!stillOnline) {
+                io.emit('user_status_change', { userId: userId, status: 'offline' });
+            }
+        }
     });
 });
 

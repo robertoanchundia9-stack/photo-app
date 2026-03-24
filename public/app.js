@@ -60,7 +60,7 @@ function init() {
     if (savedProfile) {
         userProfile = JSON.parse(savedProfile);
         profileModal.classList.remove('active');
-        socket.emit('user_join', { name: userProfile.fullName, photo: userProfile.photo });
+        socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
         registerUserOnServer(userProfile); // Ensure we are in the list
         loadMedia();
     } else {
@@ -120,30 +120,37 @@ saveProfileBtn.addEventListener('click', async () => {
     registerUserOnServer(userProfile);
     
     profileModal.classList.remove('active');
-    socket.emit('user_join', { name: userProfile.fullName, photo: userProfile.photo });
+    socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
     loadMedia();
     saveProfileBtn.innerText = 'Empezar';
 });
 
-async function loadUsers() {
-    try {
-        const res = await fetch('/api/users');
-        const users = await res.json();
-        renderUsers(users);
-    } catch(e) { console.error(e); }
-}
 
 function renderUsers(users) {
     usersGrid.innerHTML = '';
     users.forEach(u => {
         const div = document.createElement('div');
         div.className = 'user-card';
+        // Add a class for online status if available
+        const statusClass = u.isOnline ? 'online' : 'offline';
         div.innerHTML = `
-            <img src="${u.photo}" class="user-card-avatar" alt="${u.fullName}">
+            <div class="user-avatar-container">
+                <img src="${u.photo}" class="user-card-avatar" alt="${u.fullName}">
+                <span class="status-dot ${statusClass}"></span>
+            </div>
             <div class="user-card-name">${u.fullName}</div>
         `;
         usersGrid.appendChild(div);
     });
+}
+
+let allUsersData = []; // To store users locally and update status
+async function loadUsers() {
+    try {
+        const res = await fetch('/api/users');
+        allUsersData = await res.json();
+        renderUsers(allUsersData);
+    } catch(e) { console.error(e); }
 }
 
 // --- CORE UTILITIES ---
@@ -442,6 +449,14 @@ socket.on('blog_post_deleted', data => {
     currentBlogPosts = currentBlogPosts.filter(p => p.id !== data.postId);
     renderBlogPosts();
     if(blogPostModal.classList.contains('active')) blogPostModal.classList.remove('active');
+});
+
+socket.on('user_status_change', data => {
+    const user = allUsersData.find(u => u.userId === data.userId);
+    if (user) {
+        user.isOnline = (data.status === 'online');
+        renderUsers(allUsersData);
+    }
 });
 
 socket.on('new_media', () => loadMedia());
