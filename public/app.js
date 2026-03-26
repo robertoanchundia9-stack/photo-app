@@ -28,6 +28,14 @@ const blogPostFullContent = document.getElementById('blog-post-full-content');
 
 const themeToggle = document.getElementById('theme-toggle');
 
+// Theme toggle logic
+if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('light-mode');
+        themeToggle.textContent = document.body.classList.contains('light-mode') ? '🌙' : '☀️';
+    });
+}
+
 // Sections
 const gallerySection = document.getElementById('gallery-section');
 const blogSection = document.getElementById('blog-section');
@@ -314,11 +322,12 @@ navUsers.onclick = () => {
 navChat.onclick = () => {
     chatSidebar.classList.toggle('hidden');
     if (!chatSidebar.classList.contains('hidden')) {
-        if (window.innerWidth >= 768) { chatSidebar.style.position = 'relative'; chatSidebar.style.width = '350px'; }
         updateActiveNav(navChat);
     } else {
-        if (window.innerWidth >= 768) chatSidebar.style.position = 'absolute';
-        updateActiveNav(gallerySection.classList.contains('hidden') ? (blogSection.classList.contains('hidden') ? navUsers : navBlog) : navGallery);
+        // Return active state to the visible section
+        const activeSection = !gallerySection.classList.contains('hidden') ? navGallery : 
+                             (!blogSection.classList.contains('hidden') ? navBlog : navUsers);
+        updateActiveNav(activeSection);
     }
 };
 
