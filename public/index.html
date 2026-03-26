@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zaida Marina</title>
+    <title>Zara Marina Varela</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#ff00ff">
     <link rel="icon" href="icon.png" type="image/png">
@@ -32,7 +32,7 @@
         </div>
     </div>
 
-    <!-- Viewer Modal -->
+    <!-- Viewer Modal (Gallery) -->
     <div id="viewer-modal" class="modal">
         <div class="modal-content glass viewer-content">
             <button id="close-viewer-btn" class="close-btn">&times;</button>
@@ -54,9 +54,10 @@
         <main id="gallery-section" class="gallery-section">
             <header class="glass-header">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <h1 class="neon-title">✨ ZAIDA MARINA</h1>
+                    <h1 class="neon-title">✨ Zara Marina Varela</h1>
                     <div class="header-tools">
-                        <button id="theme-toggle" class="btn secondary" title="Tema">☀️</button>
+                        <button id="theme-toggle" class="btn secondary" title="Cambiar Tema">☀️</button>
+                        <button id="fullscreen-btn" class="btn secondary" title="Pantalla Completa">📺</button>
                         <button id="install-app-btn" class="btn secondary" style="display: none;">🔽</button>
                     </div>
                 </div>
@@ -76,25 +77,27 @@
         <main id="blog-section" class="blog-section hidden">
             <header class="glass-header">
                 <div style="display: flex; align-items: center; gap: 1rem;">
-                    <h1 class="neon-title">📖 Blog</h1>
-                    <button id="back-to-gallery-btn" class="btn secondary" style="padding: 0.4rem 0.8rem; font-size: 0.7rem;">⬅️ Volver</button>
+                    <h1 class="neon-title">📖 Zara Marina Varela</h1>
+                    <button id="back-to-gallery-btn" class="btn secondary" style="padding: 0.5rem 1rem; font-size: 0.8rem;">⬅️ Volver</button>
                 </div>
             </header>
             <div class="blog-container">
                 <div class="create-post-card glass">
-                    <textarea id="blog-text-input" placeholder="Escribe algo..." rows="3"></textarea>
+                    <textarea id="blog-text-input" placeholder="Escribe algo increíble..." rows="3"></textarea>
                     <div class="post-actions" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
                         <div style="display: flex; align-items: center;">
                             <label class="btn secondary" style="padding: 0.5rem 1rem;">
                                 📷 Adjuntar
                                 <input type="file" id="blog-media-input" accept="image/*,video/mp4" style="display: none;">
                             </label>
-                            <span id="blog-media-name" style="font-size: 0.7rem; margin-left: 0.5rem; color: #888;"></span>
+                            <span id="blog-media-name" style="font-size: 0.8rem; margin-left: 0.5rem; color: #aaa;"></span>
                         </div>
-                        <button id="submit-post-btn" class="btn primary" style="padding: 0.5rem 1.5rem;">Publicar</button>
+                        <button id="submit-post-btn" class="btn primary" style="padding: 0.5rem 2rem;">Publicar</button>
                     </div>
                 </div>
-                <div id="blog-feed" class="blog-feed"></div>
+                <div id="blog-feed" class="blog-feed">
+                    <!-- Blog posts will be injected here -->
+                </div>
             </div>
         </main>
 
@@ -104,19 +107,23 @@
                 <h1 class="neon-title">👥 Comunidad</h1>
             </header>
             <div class="users-container">
-                <div id="users-grid" class="users-grid"></div>
+                <div id="users-grid" class="users-grid">
+                    <!-- Users will be injected here -->
+                </div>
             </div>
         </main>
 
         <!-- Sidebar Chat -->
-        <aside id="chat-sidebar" class="chat-sidebar glass hidden">
+        <aside id="chat-sidebar" class="chat-sidebar glass">
             <div class="chat-header">
                 <h2>Chat Local</h2>
                 <button id="close-chat-btn" class="close-btn">&times;</button>
             </div>
-            <div id="chat-messages" class="chat-messages"></div>
+            <div id="chat-messages" class="chat-messages">
+                <!-- Messages -->
+            </div>
             <div class="chat-input-area">
-                <input type="text" id="chat-input" placeholder="Mensaje...">
+                <input type="text" id="chat-input" placeholder="Escribe un mensaje...">
                 <button id="send-msg-btn" class="btn primary">Enviar</button>
             </div>
         </aside>
@@ -133,7 +140,7 @@
             </button>
             <button id="nav-users" class="nav-item">
                 <span class="nav-icon">👥</span>
-                <span class="nav-label">Gente</span>
+                <span class="nav-label">Comunidad</span>
             </button>
             <button id="nav-chat" class="nav-item">
                 <span class="nav-icon">💬</span>
@@ -148,7 +155,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
-            .then(() => console.log('SW Ok'));
+            .then(() => console.log('Service Worker Registrado'));
         }
     </script>
 </body>
