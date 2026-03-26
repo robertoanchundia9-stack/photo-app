@@ -27,7 +27,6 @@ const closeBlogModalBtn = document.getElementById('close-blog-modal-btn');
 const blogPostFullContent = document.getElementById('blog-post-full-content');
 
 const themeToggle = document.getElementById('theme-toggle');
-const fullscreenBtn = document.getElementById('fullscreen-btn');
 
 // Sections
 const gallerySection = document.getElementById('gallery-section');
@@ -61,14 +60,14 @@ function init() {
         userProfile = JSON.parse(savedProfile);
         profileModal.classList.remove('active');
         socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
-        registerUserOnServer(userProfile); // Ensure we are in the list
+        registerUserOnServer(userProfile);
         loadMedia();
     } else {
         profileModal.classList.add('active');
     }
 }
 
-// --- PROFILE & USER DIRECTORY ---
+// --- PROFILE ---
 profileImageInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -85,23 +84,18 @@ async function registerUserOnServer(profile) {
         await fetch('/api/register-user', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                userId: profile.userId,
-                fullName: profile.fullName,
-                photo: profile.photo
-            })
+            body: JSON.stringify(profile)
         });
-    } catch(e) { console.error('Register failed', e); }
+    } catch(e) {}
 }
 
 saveProfileBtn.addEventListener('click', async () => {
     const firstName = firstNameInput.value.trim();
     const lastName = lastNameInput.value.trim();
     const file = profileImageInput.files[0];
-
     if (!firstName || !lastName) return alert('Nombre y apellido obligatorios.');
 
-    let photoUrl = 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y';
+    let photoUrl = 'https://www.gravatar.com/avatar/0?d=mp';
     if (file) {
         const formData = new FormData();
         formData.append('mediaFile', file);
@@ -110,28 +104,34 @@ saveProfileBtn.addEventListener('click', async () => {
             const res = await fetch('/api/profile-photo', { method: 'POST', body: formData });
             const data = await res.json();
             photoUrl = data.url;
-        } catch (err) { console.error('Profile photo upload failed', err); }
+        } catch (e) {}
     }
 
-    const userId = 'user_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+    const userId = 'u_' + Math.random().toString(36).substr(2, 9);
     userProfile = { userId, firstName, lastName, fullName: `${firstName} ${lastName}`, photo: photoUrl };
     localStorage.setItem('photoApp_userProfile', JSON.stringify(userProfile));
     
     registerUserOnServer(userProfile);
-    
     profileModal.classList.remove('active');
     socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
     loadMedia();
-    saveProfileBtn.innerText = 'Empezar';
 });
 
+// --- USERS DIRECTORY ---
+let allUsersData = [];
+async function loadUsers() {
+    try {
+        const res = await fetch('/api/users');
+        allUsersData = await res.json();
+        renderUsers(allUsersData);
+    } catch(e) {}
+}
 
 function renderUsers(users) {
     usersGrid.innerHTML = '';
     users.forEach(u => {
         const div = document.createElement('div');
         div.className = 'user-card';
-        // Add a class for online status if available
         const statusClass = u.isOnline ? 'online' : 'offline';
         div.innerHTML = `
             <div class="user-avatar-container">
@@ -144,34 +144,6 @@ function renderUsers(users) {
     });
 }
 
-let allUsersData = []; // To store users locally and update status
-async function loadUsers() {
-    try {
-        const res = await fetch('/api/users');
-        allUsersData = await res.json();
-        renderUsers(allUsersData);
-    } catch(e) { console.error(e); }
-}
-
-// --- CORE UTILITIES ---
-fullscreenBtn.onclick = () => {
-    if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
-    else document.exitFullscreen().catch(() => {});
-};
-
-document.addEventListener('fullscreenchange', () => {
-    fullscreenBtn.innerText = document.fullscreenElement ? '🔳' : '📺';
-});
-
-let isLight = localStorage.getItem('photoApp_theme') === 'light';
-if (isLight) { document.body.classList.add('light-mode'); themeToggle.innerText = '🌙'; }
-themeToggle.onclick = () => {
-    isLight = !isLight;
-    document.body.classList.toggle('light-mode', isLight);
-    themeToggle.innerText = isLight ? '🌙' : '☀️';
-    localStorage.setItem('photoApp_theme', isLight ? 'light' : 'dark');
-};
-
 // --- GALLERY ---
 let currentMediaItems = [];
 async function loadMedia() {
@@ -179,7 +151,7 @@ async function loadMedia() {
         const res = await fetch('/api/media');
         currentMediaItems = await res.json();
         renderGallery(currentMediaItems);
-    } catch (err) { console.error(err); }
+    } catch (err) {}
 }
 
 function renderGallery(mediaItems) {
@@ -194,7 +166,7 @@ function renderGallery(mediaItems) {
             </div>
             <div class="card-overlay">
                 <button class="like-btn" onclick="event.stopPropagation(); socket.emit('toggle_like', { id: '${item.name}' })">❤️ <span>${item.likes || 0}</span></button>
-                ${isOwner ? `<button class="delete-btn" onclick="event.stopPropagation(); if(confirm('¿Borrar?')) socket.emit('delete_media', { id: '${item.name}', userId: '${userProfile.userId}' })">🗑️</button>` : ''}
+                ${isOwner ? `<button class="delete-btn" onclick="event.stopPropagation(); if(confirm('¿Borrar?')) socket.emit('delete_media', { id: '${item.name}' })">🗑️</button>` : ''}
             </div>
         `;
         galleryGrid.appendChild(div);
@@ -218,7 +190,7 @@ uploadInput.onchange = async (e) => {
     const formData = new FormData();
     formData.append('mediaFile', file);
     formData.append('userId', userProfile.userId);
-    try { await fetch('/api/upload', { method: 'POST', body: formData }); } catch(err) { alert('Error subiendo'); }
+    try { await fetch('/api/upload', { method: 'POST', body: formData }); } catch(err) {}
     uploadInput.value = '';
 };
 
@@ -229,15 +201,11 @@ async function loadBlogPosts() {
         const res = await fetch('/api/blog');
         currentBlogPosts = await res.json();
         renderBlogPosts();
-    } catch(err) { console.error('Error loading blog posts:', err); }
+    } catch(err) {}
 }
 
 function renderBlogPosts() {
     blogFeed.innerHTML = '';
-    if (currentBlogPosts.length === 0) {
-        blogFeed.innerHTML = '<p style="text-align:center; opacity:0.5;">No hay publicaciones todavía.</p>';
-        return;
-    }
     currentBlogPosts.forEach(post => {
         const isOwner = userProfile && (post.userId === userProfile.userId);
         const div = document.createElement('div');
@@ -246,13 +214,12 @@ function renderBlogPosts() {
         div.innerHTML = `
             <div class="blog-post-header">
                 <div class="blog-post-author-info">
-                    <img src="${post.authorPhoto || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}" class="blog-post-avatar">
+                    <img src="${post.authorPhoto || 'https://www.gravatar.com/avatar/0?d=mp'}" class="blog-post-avatar">
                     <div>
                         <div class="blog-post-author">${post.author}</div>
                         <div class="blog-post-time">${new Date(post.createdAt).toLocaleDateString()}</div>
                     </div>
                 </div>
-                ${isOwner ? `<button class="blog-post-menu-btn" onclick="event.stopPropagation(); if(confirm('¿Borrar publicacion?')){ socket.emit('delete_blog_post', { postId: '${post.id}', userId: '${userProfile.userId}' }); }">🗑️</button>` : ''}
             </div>
             <div class="blog-post-content">${post.text}</div>
             ${post.media ? `<div class="blog-post-media">${post.media.type === 'video' ? `<video src="${post.media.url}#t=0.5"></video>` : `<img src="${post.media.url}" loading="lazy">`}</div>` : ''}
@@ -268,33 +235,22 @@ function renderBlogPosts() {
 function openFullPost(postId) {
     const post = currentBlogPosts.find(p => p.id === postId);
     if (!post) return;
-
     const isOwner = userProfile && (post.userId === userProfile.userId);
     blogPostFullContent.innerHTML = `
-        <div class="blog-post full-view" style="cursor:default;">
+        <div class="blog-post full-view">
             <div class="blog-post-header">
-                <div class="blog-post-author-info">
-                    <img src="${post.authorPhoto || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp&f=y'}" class="blog-post-avatar">
-                    <div>
-                        <div class="blog-post-author">${post.author}</div>
-                        <div class="blog-post-time">${new Date(post.createdAt).toLocaleString()}</div>
-                    </div>
-                </div>
-                ${isOwner ? `<button class="btn secondary" style="font-size:0.8rem; padding: 0.4rem 0.8rem;" onclick="if(confirm('¿Borrar?')){ socket.emit('delete_blog_post', { postId: '${post.id}', userId: '${userProfile.userId}' }); blogPostModal.classList.remove('active'); }">🗑️ Borrar</button>` : ''}
+                <strong>${post.author}</strong>
+                ${isOwner ? `<button class="btn secondary" style="font-size:0.7rem;" onclick="socket.emit('delete_blog_post', { postId: '${post.id}', userId: '${userProfile.userId}' }); blogPostModal.classList.remove('active');">🗑️ Borrar</button>` : ''}
             </div>
-            <div class="blog-post-content" style="display:block; white-space: pre-wrap; font-size: 1.1rem;">${post.text}</div>
-            ${post.media ? `<div class="blog-post-media" style="margin-top: 1rem;">${post.media.type === 'video' ? `<video src="${post.media.url}" controls autoplay></video>` : `<img src="${post.media.url}">`}</div>` : ''}
-            <div class="blog-actions">
-                <button class="blog-action-btn" onclick="socket.emit('blog_toggle_like', { postId: '${post.id}' })">❤️ <span>${post.likes || 0}</span> Me gusta</button>
-            </div>
-            <div class="comments-section" style="margin-top:2rem;">
-                <h4>Comentarios</h4>
-                <div class="comment-list" id="modal-comment-list" style="max-height: 200px; overflow-y: auto; margin: 1rem 0;">
-                    ${(post.comments || []).map(c => `<div class="comment-item"><span class="comment-author">${c.author}:</span> ${c.text}</div>`).join('')}
+            <div class="blog-post-content">${post.text}</div>
+            ${post.media ? `<div class="blog-post-media">${post.media.type === 'video' ? `<video src="${post.media.url}" controls autoplay></video>` : `<img src="${post.media.url}">`}</div>` : ''}
+            <div class="comments-section" style="margin-top:1rem; border-top:1px solid #333; padding-top:1rem;">
+                <div id="modal-comment-list">
+                    ${(post.comments || []).map(c => `<div><strong>${c.author}:</strong> ${c.text}</div>`).join('')}
                 </div>
-                <div class="comment-input-area">
-                    <input type="text" placeholder="Comentar..." id="modal-comment-input" onkeypress="if(event.key==='Enter' && this.value.trim()){ socket.emit('blog_add_comment', { postId: '${post.id}', author: userProfile.fullName, text: this.value }); this.value=''; }">
-                    <button class="btn primary" onclick="const input = document.getElementById('modal-comment-input'); if(input.value.trim()){ socket.emit('blog_add_comment', { postId: '${post.id}', author: userProfile.fullName, text: input.value }); input.value=''; }">Enviar</button>
+                <div style="display:flex; gap:0.5rem; margin-top:1rem;">
+                    <input type="text" placeholder="Comentar..." id="modal-comment-input">
+                    <button class="btn primary" onclick="const i=document.getElementById('modal-comment-input'); socket.emit('blog_add_comment', { postId: '${post.id}', author: userProfile.fullName, text: i.value }); i.value='';">Post</button>
                 </div>
             </div>
         </div>
@@ -302,35 +258,20 @@ function openFullPost(postId) {
     blogPostModal.classList.add('active');
 }
 
-closeBlogModalBtn.onclick = () => {
-    blogPostModal.classList.remove('active');
-    blogPostFullContent.innerHTML = '';
-};
-
-blogMediaInput.onchange = (e) => { blogMediaName.innerText = e.target.files[0]?.name || ''; };
+closeBlogModalBtn.onclick = () => blogPostModal.classList.remove('active');
 
 submitPostBtn.onclick = async () => {
     const text = blogTextInput.value.trim();
     const file = blogMediaInput.files[0];
-    if ((!text && !file) || !userProfile) return;
-
+    if (!text && !file) return;
     const formData = new FormData();
     formData.append('text', text);
     formData.append('author', userProfile.fullName);
     formData.append('authorPhoto', userProfile.photo);
     formData.append('userId', userProfile.userId);
     if (file) formData.append('mediaFile', file);
-
-    submitPostBtn.disabled = true;
-    try { 
-        const res = await fetch('/api/blog', { method: 'POST', body: formData }); 
-        if (res.ok) {
-            blogTextInput.value = ''; 
-            blogMediaInput.value = ''; 
-            blogMediaName.innerText = ''; 
-        }
-    } 
-    catch(err) { alert('Error al publicar'); } finally { submitPostBtn.disabled = false; }
+    try { await fetch('/api/blog', { method: 'POST', body: formData }); } catch(e) {}
+    blogTextInput.value = ''; blogMediaInput.value = ''; blogMediaName.innerText = '';
 };
 
 // --- CHAT & NAVIGATION ---
@@ -358,44 +299,26 @@ function updateActiveNav(activeItem) {
     activeItem.classList.add('active');
 }
 
-function hideAllSections() {
-    gallerySection.classList.add('hidden');
-    blogSection.classList.add('hidden');
-    usersSection.classList.add('hidden');
-}
-
 navGallery.onclick = () => { 
-    hideAllSections();
-    gallerySection.classList.remove('hidden'); 
+    gallerySection.classList.remove('hidden'); blogSection.classList.add('hidden'); usersSection.classList.add('hidden');
     updateActiveNav(navGallery); 
 };
-
 navBlog.onclick = () => { 
-    hideAllSections();
-    blogSection.classList.remove('hidden'); 
-    loadBlogPosts(); 
-    updateActiveNav(navBlog); 
+    gallerySection.classList.add('hidden'); blogSection.classList.remove('hidden'); usersSection.classList.add('hidden');
+    loadBlogPosts(); updateActiveNav(navBlog); 
 };
-
 navUsers.onclick = () => {
-    hideAllSections();
-    usersSection.classList.remove('hidden');
-    loadUsers();
-    updateActiveNav(navUsers);
+    gallerySection.classList.add('hidden'); blogSection.classList.add('hidden'); usersSection.classList.remove('hidden');
+    loadUsers(); updateActiveNav(navUsers);
 };
-
 navChat.onclick = () => {
     chatSidebar.classList.toggle('hidden');
-    if(!chatSidebar.classList.contains('hidden')) {
-        chatSidebar.style.position = 'relative'; 
-        chatSidebar.style.width = '350px'; 
+    if (!chatSidebar.classList.contains('hidden')) {
+        if (window.innerWidth >= 768) { chatSidebar.style.position = 'relative'; chatSidebar.style.width = '350px'; }
         updateActiveNav(navChat);
     } else {
-        chatSidebar.style.position = 'absolute'; 
-        let currentActive = navGallery;
-        if (!blogSection.classList.contains('hidden')) currentActive = navBlog;
-        if (!usersSection.classList.contains('hidden')) currentActive = navUsers;
-        updateActiveNav(currentActive);
+        if (window.innerWidth >= 768) chatSidebar.style.position = 'absolute';
+        updateActiveNav(gallerySection.classList.contains('hidden') ? (blogSection.classList.contains('hidden') ? navUsers : navBlog) : navGallery);
     }
 };
 
@@ -406,67 +329,28 @@ socket.on('update_like', data => {
     const item = currentMediaItems.find(i => i.name === data.id); 
     if(item){ item.likes = data.likes; renderGallery(currentMediaItems); }
 });
-
 socket.on('chat_message', msg => appendMessage(msg, false));
-
 socket.on('user_joined', data => { 
-    const div = document.createElement('div'); 
-    div.className='chat-notice'; 
-    div.innerText=`${data.name} se unió`; 
-    chatMessages.appendChild(div); 
+    const div = document.createElement('div'); div.style.fontSize='0.7rem'; div.style.opacity='0.5'; div.style.textAlign='center';
+    div.innerText=`${data.name} se unió`; chatMessages.appendChild(div); 
 });
-
 socket.on('blog_update_likes', data => {
     const post = currentBlogPosts.find(p => p.id === data.postId);
-    if(post){
-        post.likes = data.likes;
-        renderBlogPosts();
-        if(blogPostModal.classList.contains('active')) {
-             const likeBtn = blogPostFullContent.querySelector('.blog-action-btn span');
-             if(likeBtn) likeBtn.innerText = data.likes;
-        }
-    }
+    if(post){ post.likes = data.likes; renderBlogPosts(); }
 });
-
 socket.on('blog_new_comment', data => {
     const post = currentBlogPosts.find(p => p.id === data.postId);
-    if(post){
-        if(!post.comments) post.comments = [];
-        post.comments.push(data.comment);
-        renderBlogPosts();
-        const commentList = document.getElementById('modal-comment-list');
-        if(commentList && blogPostModal.classList.contains('active')) {
-             const div = document.createElement('div');
-             div.className = 'comment-item';
-             div.innerHTML = `<span class="comment-author">${data.comment.author}:</span> ${data.comment.text}`;
-             commentList.appendChild(div);
-             commentList.scrollTop = commentList.scrollHeight;
-        }
-    }
+    if(post){ (post.comments = post.comments || []).push(data.comment); renderBlogPosts(); }
 });
-
 socket.on('blog_post_deleted', data => {
-    currentBlogPosts = currentBlogPosts.filter(p => p.id !== data.postId);
-    renderBlogPosts();
-    if(blogPostModal.classList.contains('active')) blogPostModal.classList.remove('active');
+    currentBlogPosts = currentBlogPosts.filter(p => p.id !== data.postId); renderBlogPosts();
 });
-
 socket.on('user_status_change', data => {
     const user = allUsersData.find(u => u.userId === data.userId);
-    if (user) {
-        user.isOnline = (data.status === 'online');
-        renderUsers(allUsersData);
-    }
+    if (user) { user.isOnline = (data.status === 'online'); renderUsers(allUsersData); }
 });
-
 socket.on('new_media', () => loadMedia());
 socket.on('media_deleted', () => loadMedia());
-socket.on('new_blog_post', post => { 
-    const exists = currentBlogPosts.find(p => p.id === post.id);
-    if (!exists) {
-        currentBlogPosts.unshift(post); 
-        if(!blogSection.classList.contains('hidden')) renderBlogPosts(); 
-    }
-});
+socket.on('new_blog_post', post => { currentBlogPosts.unshift(post); renderBlogPosts(); });
 
 init();
