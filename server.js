@@ -20,7 +20,7 @@ const supabase = (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY)
 if (supabase) {
     console.log('✅ Supabase client initialized');
 } else {
-    console.warn('⚠️  SUPABASE_URL or SUPABASE_SERVICE_KEY not set. Data will not persist.');
+    console.warn('⚠️  SUPABASE_URL or SUPABASE_SERVICE_KEY not set. Using LOCAL MODE (some features disabled).');
 }
 
 // --- ACTIVE USERS TRACKING ---
