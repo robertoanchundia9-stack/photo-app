@@ -201,11 +201,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('private_message', async (data) => {
-        console.log('📬 Private message request:', data);
-        if (!data || !data.toUserId || !data.text || !supabase) {
-            console.error('❌ Missing data for private message');
-            return;
-        }
+        if (!data || !data.toUserId || !data.text || !supabase) return;
         const msg = {
             sender_id: data.fromUserId,
             recipient_id: data.toUserId,
@@ -215,10 +211,8 @@ io.on('connection', (socket) => {
         };
         // Persist to Supabase
         const { error } = await supabase.from('private_messages').insert(msg);
-        if (error) console.error('❌ Error saving DM to Supabase:', error.message);
         
         // Relay to recipient only
-        console.log('📲 Sending private message to room:', 'user_' + data.toUserId);
         io.to('user_' + data.toUserId).emit('private_message', msg);
     });
 
