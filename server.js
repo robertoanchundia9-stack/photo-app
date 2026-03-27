@@ -149,6 +149,18 @@ app.get('/api/users', async (req, res) => {
     res.json(users);
 });
 
+app.get('/api/private-messages', async (req, res) => {
+    const { user1, user2 } = req.query;
+    if (!supabase || !user1 || !user2) return res.json([]);
+    const { data, error } = await supabase
+        .from('private_messages')
+        .select('*')
+        .or(`and(sender_id.eq.${user1},recipient_id.eq.${user2}),and(sender_id.eq.${user2},recipient_id.eq.${user1})`)
+        .order('created_at', { ascending: true });
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data || []);
+});
+
 app.post('/api/register-user', async (req, res) => {
     const { userId, fullName, photo } = req.body;
     if (!supabase || !userId) return res.json({ success: false });
@@ -172,6 +184,7 @@ io.on('connection', (socket) => {
 
     socket.on('user_join', (data) => {
         activeSockets.set(socket.id, { userId: data.userId, name: data.name });
+        socket.join('user_' + data.userId); // Join private room
         socket.broadcast.emit('user_joined', { name: data.name });
         if (data.userId) {
             io.emit('user_status_change', { userId: data.userId, status: 'online' });
@@ -185,6 +198,21 @@ io.on('connection', (socket) => {
             text: data.text,
             timestamp: Date.now()
         });
+    });
+
+    socket.on('private_message', async (data) => {
+        if (!data || !data.toUserId || !data.text || !supabase) return;
+        const msg = {
+            sender_id: data.fromUserId,
+            recipient_id: data.toUserId,
+            sender_name: data.fromUserName,
+            text: data.text,
+            created_at: Date.now()
+        };
+        // Persist to Supabase
+        await supabase.from('private_messages').insert(msg);
+        // Relay to recipient only
+        io.to('user_' + data.toUserId).emit('private_message', msg);
     });
 
     socket.on('toggle_like', async (data) => {
