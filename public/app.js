@@ -181,6 +181,7 @@ async function openPrivateChat(recipientId, recipientName) {
 
 function sendPrivateMessage() {
     const text = privateChatInput.value.trim();
+    console.log('Attempting to send PM to:', currentRecipientId, 'Text:', text);
     if (text && userProfile && currentRecipientId) {
         const msg = {
             fromUserId: userProfile.userId,
@@ -191,6 +192,8 @@ function sendPrivateMessage() {
         socket.emit('private_message', msg);
         appendPrivateMessage({ sender_id: userProfile.userId, sender_name: userProfile.fullName, text });
         privateChatInput.value = '';
+    } else {
+        console.warn('Cannot send PM: missing data or profile');
     }
 }
 
