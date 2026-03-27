@@ -61,6 +61,19 @@ body::before {
     text-shadow: 0 0 20px rgba(0,255,255,0.3);
 }
 
+.current-user-header { 
+    display: flex; align-items: center; gap: 0.6rem; margin-top: 0.4rem; 
+    font-size: 0.85rem; font-weight: 500; color: var(--text-color);
+    animation: fadeIn 0.5s ease-out;
+}
+.header-avatar { 
+    width: 28px; height: 28px; border-radius: 50%; object-fit: cover; 
+    border: 1.5px solid var(--secondary-accent);
+    box-shadow: 0 0 10px rgba(0,255,255,0.2);
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
 .header-actions { display: flex; gap: 0.8rem; align-items: center; }
 
 /* Square Icon Buttons */

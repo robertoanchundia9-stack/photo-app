@@ -27,6 +27,9 @@ const closeBlogModalBtn = document.getElementById('close-blog-modal-btn');
 const blogPostFullContent = document.getElementById('blog-post-full-content');
 
 const themeToggle = document.getElementById('theme-toggle');
+const currentUserHeader = document.getElementById('current-user-header');
+const headerAvatar = document.getElementById('header-avatar');
+const headerFullName = document.getElementById('header-fullname');
 
 // Private Chat Elements
 const privateChatModal = document.getElementById('private-chat-modal');
@@ -76,6 +79,7 @@ function init() {
     if (savedProfile) {
         userProfile = JSON.parse(savedProfile);
         profileModal.classList.remove('active');
+        updateHeaderProfile();
         socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
         registerUserOnServer(userProfile);
         loadMedia();
@@ -130,9 +134,18 @@ saveProfileBtn.addEventListener('click', async () => {
     
     registerUserOnServer(userProfile);
     profileModal.classList.remove('active');
+    updateHeaderProfile();
     socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
     loadMedia();
 });
+
+function updateHeaderProfile() {
+    if (userProfile && currentUserHeader) {
+        headerAvatar.src = userProfile.photo;
+        headerFullName.innerText = userProfile.fullName;
+        currentUserHeader.classList.remove('hidden');
+    }
+}
 
 // --- USERS DIRECTORY ---
 let allUsersData = [];
@@ -181,7 +194,6 @@ async function openPrivateChat(recipientId, recipientName) {
 
 function sendPrivateMessage() {
     const text = privateChatInput.value.trim();
-    console.log('Attempting to send PM to:', currentRecipientId, 'Text:', text);
     if (text && userProfile && currentRecipientId) {
         const msg = {
             fromUserId: userProfile.userId,
@@ -192,8 +204,6 @@ function sendPrivateMessage() {
         socket.emit('private_message', msg);
         appendPrivateMessage({ sender_id: userProfile.userId, sender_name: userProfile.fullName, text });
         privateChatInput.value = '';
-    } else {
-        console.warn('Cannot send PM: missing data or profile');
     }
 }
 

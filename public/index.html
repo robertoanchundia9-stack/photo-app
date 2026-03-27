@@ -66,12 +66,16 @@
         <!-- Main Content (Gallery) -->
         <main id="gallery-section" class="gallery-section">
             <header class="glass-header">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <div style="display: flex; flex-direction: column;">
                     <h1 class="neon-title">✨ ZAIDA MARINA</h1>
-                    <div class="header-tools">
-                        <button id="theme-toggle" class="btn secondary" title="Tema">☀️</button>
-                        <button id="install-app-btn" class="btn secondary" style="display: none;">🔽</button>
+                    <div id="current-user-header" class="current-user-header hidden">
+                        <img id="header-avatar" src="" class="header-avatar">
+                        <span id="header-fullname"></span>
                     </div>
+                </div>
+                <div class="header-tools">
+                    <button id="theme-toggle" class="btn secondary" title="Tema">☀️</button>
+                    <button id="install-app-btn" class="btn secondary" style="display: none;">🔽</button>
                 </div>
                 <div class="header-actions">
                     <label class="btn primary upload-btn" title="Subir Archivo">
