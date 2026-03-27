@@ -52,6 +52,7 @@ if (themeToggle) {
 const gallerySection = document.getElementById('gallery-section');
 const blogSection = document.getElementById('blog-section');
 const usersSection = document.getElementById('users-section');
+const historySection = document.getElementById('history-section');
 
 // Blog Elements
 const backToGalleryBtn = document.getElementById('back-to-gallery-btn');
@@ -68,8 +69,9 @@ const usersGrid = document.getElementById('users-grid');
 const navGallery = document.getElementById('nav-gallery');
 const navBlog = document.getElementById('nav-blog');
 const navUsers = document.getElementById('nav-users');
+const navHistory = document.getElementById('nav-history');
 const navChat = document.getElementById('nav-chat');
-const navItems = [navGallery, navBlog, navUsers, navChat];
+const navItems = [navGallery, navBlog, navUsers, navHistory, navChat];
 
 let userProfile = null;
 
@@ -376,16 +378,20 @@ function updateActiveNav(activeItem) {
 }
 
 navGallery.onclick = () => { 
-    gallerySection.classList.remove('hidden'); blogSection.classList.add('hidden'); usersSection.classList.add('hidden');
+    gallerySection.classList.remove('hidden'); blogSection.classList.add('hidden'); usersSection.classList.add('hidden'); historySection.classList.add('hidden');
     updateActiveNav(navGallery); 
 };
 navBlog.onclick = () => { 
-    gallerySection.classList.add('hidden'); blogSection.classList.remove('hidden'); usersSection.classList.add('hidden');
+    gallerySection.classList.add('hidden'); blogSection.classList.remove('hidden'); usersSection.classList.add('hidden'); historySection.classList.add('hidden');
     loadBlogPosts(); updateActiveNav(navBlog); 
 };
 navUsers.onclick = () => {
-    gallerySection.classList.add('hidden'); blogSection.classList.add('hidden'); usersSection.classList.remove('hidden');
+    gallerySection.classList.add('hidden'); blogSection.classList.add('hidden'); usersSection.classList.remove('hidden'); historySection.classList.add('hidden');
     loadUsers(); updateActiveNav(navUsers);
+};
+navHistory.onclick = () => {
+    gallerySection.classList.add('hidden'); blogSection.classList.add('hidden'); usersSection.classList.add('hidden'); historySection.classList.remove('hidden');
+    updateActiveNav(navHistory);
 };
 navChat.onclick = () => {
     chatSidebar.classList.toggle('hidden');
@@ -394,7 +400,8 @@ navChat.onclick = () => {
     } else {
         // Return active state to the visible section
         const activeSection = !gallerySection.classList.contains('hidden') ? navGallery : 
-                             (!blogSection.classList.contains('hidden') ? navBlog : navUsers);
+                             (!blogSection.classList.contains('hidden') ? navBlog : 
+                             (!usersSection.classList.contains('hidden') ? navUsers : navHistory));
         updateActiveNav(activeSection);
     }
 };
