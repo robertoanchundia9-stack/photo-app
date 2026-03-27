@@ -215,4 +215,9 @@ body::before {
     .bottom-nav { width: 95%; bottom: 15px; height: 65px; padding: 0 1rem; gap: 0; }
 }
 
+#private-chat-messages {
+    min-height: 300px;
+    max-height: 400px;
+}
+
 .hidden { display: none !important; }

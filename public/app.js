@@ -28,6 +28,15 @@ const blogPostFullContent = document.getElementById('blog-post-full-content');
 
 const themeToggle = document.getElementById('theme-toggle');
 
+// Private Chat Elements
+const privateChatModal = document.getElementById('private-chat-modal');
+const closePrivateChatBtn = document.getElementById('close-private-chat-btn');
+const privateChatHeader = document.getElementById('private-chat-header');
+const privateChatMessages = document.getElementById('private-chat-messages');
+const privateChatInput = document.getElementById('private-chat-input');
+const sendPrivateMsgBtn = document.getElementById('send-private-msg-btn');
+let currentRecipientId = null;
+
 // Theme toggle logic
 if (themeToggle) {
     themeToggle.addEventListener('click', () => {
@@ -138,6 +147,7 @@ async function loadUsers() {
 function renderUsers(users) {
     usersGrid.innerHTML = '';
     users.forEach(u => {
+        if (userProfile && u.userId === userProfile.userId) return; // Don't show self
         const div = document.createElement('div');
         div.className = 'user-card';
         const statusClass = u.isOnline ? 'online' : 'offline';
@@ -147,10 +157,55 @@ function renderUsers(users) {
                 <span class="status-dot ${statusClass}"></span>
             </div>
             <div class="user-card-name">${u.fullName}</div>
+            <button class="btn primary" style="width:100%; margin-top:0.5rem; font-size:0.7rem;" onclick="openPrivateChat('${u.userId}', '${u.fullName}')">💬 Chat</button>
         `;
         usersGrid.appendChild(div);
     });
 }
+
+async function openPrivateChat(recipientId, recipientName) {
+    currentRecipientId = recipientId;
+    privateChatHeader.innerText = `Chat con ${recipientName}`;
+    privateChatMessages.innerHTML = '<div style="text-align:center; opacity:0.5;">Cargando...</div>';
+    privateChatModal.classList.add('active');
+    
+    try {
+        const res = await fetch(`/api/private-messages?user1=${userProfile.userId}&user2=${recipientId}`);
+        const history = await res.json();
+        privateChatMessages.innerHTML = '';
+        history.forEach(msg => appendPrivateMessage(msg));
+    } catch(e) {
+        privateChatMessages.innerHTML = '';
+    }
+}
+
+function sendPrivateMessage() {
+    const text = privateChatInput.value.trim();
+    if (text && userProfile && currentRecipientId) {
+        const msg = {
+            fromUserId: userProfile.userId,
+            fromUserName: userProfile.fullName,
+            toUserId: currentRecipientId,
+            text: text
+        };
+        socket.emit('private_message', msg);
+        appendPrivateMessage({ sender_id: userProfile.userId, sender_name: userProfile.fullName, text });
+        privateChatInput.value = '';
+    }
+}
+
+function appendPrivateMessage(msg) {
+    const isSelf = msg.sender_id === userProfile.userId;
+    const div = document.createElement('div');
+    div.className = `message ${isSelf ? 'self' : ''}`;
+    div.innerHTML = `${!isSelf ? `<div class="message-sender">${msg.sender_name}</div>` : ''}<div class="message-text">${msg.text}</div>`;
+    privateChatMessages.appendChild(div);
+    privateChatMessages.scrollTop = privateChatMessages.scrollHeight;
+}
+
+sendPrivateMsgBtn.onclick = sendPrivateMessage;
+privateChatInput.onkeypress = (e) => { if(e.key==='Enter') sendPrivateMessage(); };
+closePrivateChatBtn.onclick = () => privateChatModal.classList.remove('active');
 
 // --- GALLERY ---
 let currentMediaItems = [];
@@ -339,6 +394,16 @@ socket.on('update_like', data => {
     if(item){ item.likes = data.likes; renderGallery(currentMediaItems); }
 });
 socket.on('chat_message', msg => appendMessage(msg, false));
+
+socket.on('private_message', msg => {
+    // If the modal for this sender is open, append the message
+    if (privateChatModal.classList.contains('active') && currentRecipientId === msg.sender_id) {
+        appendPrivateMessage(msg);
+    } else {
+        // Simple notification
+        alert(`Nuevo mensaje de ${msg.sender_name}: ${msg.text}`);
+    }
+});
 socket.on('user_joined', data => { 
     const div = document.createElement('div'); div.style.fontSize='0.7rem'; div.style.opacity='0.5'; div.style.textAlign='center';
     div.innerText=`${data.name} se unió`; chatMessages.appendChild(div); 
