@@ -84,6 +84,20 @@
                     </label>
                 </div>
             </header>
+
+            <!-- Reels Bar -->
+            <div class="reels-bar glass">
+                <div class="reel-item create-reel" id="btn-open-recorder">
+                    <div class="reel-bubble">
+                        <span class="plus-icon">+</span>
+                    </div>
+                    <span>Reel</span>
+                </div>
+                <div id="reels-list" class="reels-list">
+                    <!-- Reels bubbles will be injected here -->
+                </div>
+            </div>
+
             <div id="gallery-grid" class="gallery-grid">
                 <!-- Media items will be injected here -->
             </div>
@@ -249,7 +263,37 @@
         </nav>
     </div>
 
+    <!-- Reels Recording Modal -->
+    <div id="recorder-modal" class="modal">
+        <div class="recorder-container glass">
+            <div class="recorder-header">
+                <h3>Grabar Reel (8s)</h3>
+                <button id="close-recorder-btn" class="close-btn">&times;</button>
+            </div>
+            <div class="viewfinder-wrapper">
+                <video id="viewfinder" autoplay muted playsinline></video>
+                <div id="recording-progress" class="progress-bar"></div>
+                <div id="recording-timer" class="timer">0:00</div>
+            </div>
+            <div class="recorder-actions">
+                <button id="start-record-btn" class="btn-record">🔴</button>
+                <button id="stop-record-btn" class="btn secondary hidden">Stop</button>
+                <div id="uploading-reel-status" class="hidden">Subiendo... 🚀</div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Reels Viewer -->
+    <div id="reel-viewer" class="modal viewer-modal">
+        <div class="reel-viewer-container">
+            <button id="close-reel-viewer" class="close-btn">&times;</button>
+            <video id="reel-video-player" autoplay loop playsinline></video>
+            <div class="reel-author-info">
+                <img id="reel-author-img" src="" class="header-avatar">
+                <span id="reel-author-name"></span>
+            </div>
+        </div>
+    </div>
 
     <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
