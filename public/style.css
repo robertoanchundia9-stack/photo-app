@@ -294,39 +294,44 @@ body.light-mode .history-section {
 
 /* --- REELS BAR --- */
 .reels-bar {
-    display: flex;
-    overflow-x: auto;
-    padding: 1.5rem 1rem;
-    gap: 1.5rem;
-    margin-bottom: 5rem; /* Even more space to push the gallery down */
+    display: flex !important;
+    overflow-x: auto !important;
+    padding: 2rem 1rem !important;
+    gap: 1.5rem !important;
+    margin-bottom: 6rem !important; /* Force space */
+    min-height: 200px !important;    /* Force space */
     scrollbar-width: none;
     -ms-overflow-style: none;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 10;
 }
 
 .reel-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.8rem;
-    min-width: 90px;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0.8rem !important;
+    min-width: 100px !important;
     cursor: pointer;
-    transition: transform 0.2s;
 }
 
 .reel-bubble {
-    width: 85px;
-    height: 130px;
-    min-height: 130px; /* Force height to prevent squashing */
-    border-radius: 15px;
-    border: 3px solid #ff00ff;
-    padding: 3px;
-    background: var(--glass);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    box-shadow: 0 5px 15px rgba(255, 0, 255, 0.2);
+    width: 90px !important;
+    height: 140px !important;
+    min-height: 140px !important;
+    border-radius: 18px !important;
+    border: 3px solid #ff00ff !important;
+    padding: 4px !important;
+    background: var(--glass) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow: hidden !important;
+}
+
+.gallery-grid {
+    margin-top: 2rem !important;
 }
 
 .reel-item.create-reel .reel-bubble {
