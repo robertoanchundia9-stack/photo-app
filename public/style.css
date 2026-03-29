@@ -969,6 +969,5 @@ body.light-mode .history-section {
     50% { transform: scale(1.02); box-shadow: 0 0 15px rgba(255, 170, 0, 0.5); }
     100% { transform: scale(1); }
 }
-}
 
 .hidden { display: none !important; }
