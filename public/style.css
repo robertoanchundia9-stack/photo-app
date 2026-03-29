@@ -292,6 +292,57 @@ body.light-mode .history-section {
 .attr-column li { margin-bottom: 0.5rem; padding-left: 1.5rem; position: relative; }
 .attr-column li::before { content: '✨'; position: absolute; left: 0; }
 
+/* --- ACTIVE USERS BAR --- */
+.active-users-bar {
+    display: flex;
+    overflow-x: auto;
+    padding: 0.5rem 1rem;
+    gap: 1rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    background: rgba(0, 0, 0, 0.2);
+    min-height: 70px;
+    align-items: center;
+}
+.active-users-bar::-webkit-scrollbar { display: none; }
+
+.active-user-container {
+    position: relative;
+    flex-shrink: 0;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.active-user-container:hover { transform: scale(1.1); }
+
+.active-user-circle {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid var(--secondary-accent);
+    padding: 2px;
+    background: var(--glass);
+    overflow: hidden;
+}
+.active-user-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.user-online-dot {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #00ff00;
+    border: 2px solid #000;
+    box-shadow: 0 0 8px #00ff00;
+    z-index: 5;
+}
+
 /* --- REELS BAR --- */
 .reels-bar {
     display: flex !important;

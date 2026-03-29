@@ -56,6 +56,7 @@ const closeReelViewer = document.getElementById('close-reel-viewer');
 const reelVideoPlayer = document.getElementById('reel-video-player');
 const reelAuthorImg = document.getElementById('reel-author-img');
 const reelAuthorName = document.getElementById('reel-author-name');
+const activeUsersBar = document.getElementById('active-users-bar');
 
 let mediaStream = null;
 let mediaRecorder = null;
@@ -188,7 +189,33 @@ async function loadUsers() {
         const res = await fetch('/api/users');
         allUsersData = await res.json();
         renderUsers(allUsersData);
+        renderActiveUsers(allUsersData);
     } catch(e) {}
+}
+
+function renderActiveUsers(users) {
+    if (!activeUsersBar) return;
+    const onlineOthers = users.filter(u => u.isOnline && (!userProfile || u.userId !== userProfile.userId));
+    activeUsersBar.innerHTML = '';
+    
+    if (onlineOthers.length === 0) {
+        activeUsersBar.style.display = 'none';
+        return;
+    }
+    
+    activeUsersBar.style.display = 'flex';
+    onlineOthers.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'active-user-container';
+        div.onclick = () => openPrivateChat(u.userId, u.fullName);
+        div.innerHTML = `
+            <div class="active-user-circle">
+                <img src="${u.photo}" alt="${u.fullName}">
+                <div class="user-online-dot"></div>
+            </div>
+        `;
+        activeUsersBar.appendChild(div);
+    });
 }
 
 function renderUsers(users) {
@@ -605,7 +632,11 @@ socket.on('blog_post_deleted', data => {
 });
 socket.on('user_status_change', data => {
     const user = allUsersData.find(u => u.userId === data.userId);
-    if (user) { user.isOnline = (data.status === 'online'); renderUsers(allUsersData); }
+    if (user) { 
+        user.isOnline = (data.status === 'online'); 
+        renderUsers(allUsersData); 
+        renderActiveUsers(allUsersData);
+    }
 });
 socket.on('new_media', () => loadMedia());
 socket.on('media_deleted', () => loadMedia());
