@@ -153,27 +153,42 @@ body::before {
     flex: 1; overflow-y: auto; padding: 1.5rem; 
     display: flex; flex-direction: column; gap: 1rem;
     position: relative;
-    background: rgba(10, 11, 20, 0.85); /* Slightly darker for better contrast with watermark */
+    background: rgba(10, 11, 20, 0.9); /* Dark and deep */
     border-radius: 20px 20px 0 0;
 }
 
-/* Watermark Background */
+/* Watermark Background - FIXED FILENAME */
 .chat-messages::before {
     content: "";
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 80%;
-    height: 80%;
-    background-image: url('z1.png'); /* Using one of the project's photos as watermark */
+    width: 250px;
+    height: 250px;
+    background-image: url('z1.jpeg'); /* Correct filename is z1.jpeg */
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    opacity: 0.08; /* Very subtle watermark */
-    filter: blur(2px);
+    opacity: 0.12; /* Slightly more visible but still a watermark */
+    filter: blur(1px) brightness(0.8);
     pointer-events: none;
     z-index: 0;
+}
+
+/* Beautiful "No messages" placeholder */
+.chat-messages:empty::after {
+    content: '💬\A ¡Di algo bonito! ✨';
+    white-space: pre-wrap;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin-top: 50%;
+    color: var(--text-color);
+    opacity: 0.4;
+    font-size: 1.2rem;
+    font-weight: 500;
 }
 
 .message { 
