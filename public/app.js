@@ -87,6 +87,7 @@ if (themeToggle) {
 // Sections
 const gallerySection = document.getElementById('gallery-section');
 const blogSection = document.getElementById('blog-section');
+const storeSection = document.getElementById('store-section');
 const historySection = document.getElementById('history-section');
 
 // Blog/Feed Elements
@@ -818,7 +819,7 @@ socket.on('new_blog_post', post => { currentBlogPosts.unshift(post); renderBlogP
 init();
 
 // --- TIENDA / E-COMMERCE ---
-const storeSection = document.getElementById('store-section');
+// storeSection is declared at the top
 // navStore already declared at the top
 const storeGrid = document.getElementById('store-grid');
 const floatingCartBtn = document.getElementById('floating-cart-btn');
