@@ -132,14 +132,23 @@
             </div>
         </main>
 
-        <!-- Users Section -->
-        <main id="users-section" class="users-section hidden">
+        <!-- Store Section -->
+        <main id="store-section" class="store-section hidden">
             <header class="glass-header">
-                <h1 class="neon-title">👥 Comunidad</h1>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1 class="neon-title">🍔 Tienda</h1>
+                    <button id="add-product-btn" class="btn secondary" style="font-size: 0.8rem;">+ Añadir Producto</button>
+                </div>
+                <div class="promo-banner">🔥 PROMOCIÓN: ¡3x1 en Bebidas! 🔥</div>
             </header>
-            <div class="users-container">
-                <div id="users-grid" class="users-grid"></div>
+            <div class="store-container">
+                <div id="store-grid" class="store-grid"></div>
             </div>
+            
+            <!-- Floating Cart Button -->
+            <button id="floating-cart-btn" class="floating-cart-btn hidden">
+                🛒 <span id="cart-item-count" class="cart-badge">0</span>
+            </button>
         </main>
 
         <!-- History / Bio Section -->
@@ -190,7 +199,7 @@
                         <img src="z2.png?v=1" class="story-img full">
                         <div class="story-text">
                             <h3>🌱 El cambio y Castilruiz</h3>
-                            <p>A los 24 años, un vídeo suyo se hizo real. Personas empezaron a escribirle: "Esto soy yo." Ahí entendió su valor.</p>
+                            <p>A los 24 años, un vídeo suyo se hizo real. Personas empezaron a escribirle: "Esto soy real." Ahí entendió su valor.</p>
                             <p>A los 26 llega a <strong>Castilruiz</strong>. Busca calma y encuentra verdad. Menos ruido, más conexión.</p>
                         </div>
                     </div>
@@ -251,9 +260,9 @@
                 <span class="nav-icon">📖</span>
                 <span class="nav-label">Blog</span>
             </button>
-            <button id="nav-users" class="nav-item">
-                <span class="nav-icon">👥</span>
-                <span class="nav-label">Gente</span>
+            <button id="nav-store" class="nav-item">
+                <span class="nav-icon">🛒</span>
+                <span class="nav-label">Tienda</span>
             </button>
             <button id="nav-history" class="nav-item">
                 <span class="nav-icon">✨</span>
@@ -314,9 +323,82 @@
         </div>
     </div>
 
+    <!-- Cart Modal -->
+    <div id="cart-modal" class="modal">
+        <div class="cart-container glass">
+            <div class="cart-header">
+                <h3>Tu Pedido 🍔</h3>
+                <button id="close-cart-btn" class="close-btn">&times;</button>
+            </div>
+            <div id="cart-items-list" class="cart-items-list">
+                <!-- Cart items will be injected here -->
+            </div>
+            <div class="cart-summary">
+                <div class="summary-line"><span>Subtotal:</span> <span id="cart-subtotal">0.00 €</span></div>
+                <div class="summary-line discount-line"><span>Promo (3x1 Bebidas):</span> <span id="cart-discount">-0.00 €</span></div>
+                <div class="summary-line total-line"><span>Total:</span> <span id="cart-total">0.00 €</span></div>
+            </div>
+            <button id="checkout-btn" class="btn primary checkout-btn">Pagar Pedido</button>
+        </div>
+    </div>
+
+    <!-- Invoice Modal -->
+    <div id="invoice-modal" class="modal">
+        <div class="invoice-container">
+            <div class="invoice-receipt">
+                <div class="invoice-header">
+                    <h2>BURGER KING®</h2>
+                    <p>¡Gracias por tu compra!</p>
+                    <p class="invoice-date" id="invoice-date"></p>
+                    <p class="invoice-order">Pedido #<span id="invoice-id"></span></p>
+                </div>
+                <div class="invoice-body">
+                    <div class="invoice-table-header">
+                        <span>Cant - Concepto</span>
+                        <span>Importe</span>
+                    </div>
+                    <div id="invoice-items" class="invoice-items-list"></div>
+                    <div class="invoice-totals">
+                        <div class="inv-line"><span>Subtotal:</span> <span id="inv-subtotal"></span></div>
+                        <div class="inv-line"><span>Desc (3x1):</span> <span id="inv-discount"></span></div>
+                        <div class="inv-line inv-total"><span>TOTAL:</span> <span id="inv-total"></span></div>
+                    </div>
+                </div>
+                <div class="invoice-footer">
+                    <p>Atendido por: Zaida Marina</p>
+                    <button id="close-invoice-btn" class="btn secondary">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Product Modal (Admin) -->
+    <div id="add-product-modal" class="modal">
+        <div class="modal-content glass">
+            <h2>Añadir Producto</h2>
+            <div class="input-group">
+                <input type="text" id="new-prod-name" placeholder="Nombre del Producto">
+            </div>
+            <div class="input-group">
+                <input type="number" id="new-prod-price" placeholder="Precio (€)" step="0.01">
+            </div>
+            <div class="input-group">
+                <select id="new-prod-type">
+                    <option value="food">Comida/Otro</option>
+                    <option value="drink">Bebida (Aplica 3x1)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <input type="text" id="new-prod-img" placeholder="URL de Imagen (Opcional)">
+            </div>
+            <button id="save-product-btn" class="btn primary">Guardar</button>
+            <button id="cancel-product-btn" class="btn secondary">Cancelar</button>
+        </div>
+    </div>
+
     <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="app.js?v=4"></script>
+    <script src="app.js?v=6"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')

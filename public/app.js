@@ -87,7 +87,6 @@ if (themeToggle) {
 // Sections
 const gallerySection = document.getElementById('gallery-section');
 const blogSection = document.getElementById('blog-section');
-const usersSection = document.getElementById('users-section');
 const historySection = document.getElementById('history-section');
 
 // Blog/Feed Elements
@@ -105,10 +104,10 @@ let allUsersData = [];
 // Bottom Nav Elements
 const navGallery = document.getElementById('nav-gallery');
 const navBlog = document.getElementById('nav-blog');
-const navUsers = document.getElementById('nav-users');
+const navStore = document.getElementById('nav-store');
 const navHistory = document.getElementById('nav-history');
 const navChat = document.getElementById('nav-chat');
-const navItems = [navGallery, navBlog, navUsers, navHistory, navChat];
+const navItems = [navGallery, navBlog, navStore, navHistory, navChat];
 
 let userProfile = null;
 
@@ -128,6 +127,35 @@ function init() {
         profileModal.classList.add('active');
     }
 }
+
+// Navigation
+const pages = {
+    'nav-gallery': gallerySection,
+    'nav-blog': blogSection,
+    'nav-store': storeSection,
+    'nav-history': historySection
+};
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+    if(btn.id === 'nav-chat') return; // Chat is a sidebar, not a page
+    btn.onclick = () => {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Hide all main sections
+        Object.values(pages).forEach(page => {
+            if(page) page.classList.add('hidden');
+        });
+        
+        // Show selected section
+        if (pages[btn.id]) {
+            pages[btn.id].classList.remove('hidden');
+            if(btn.id === 'nav-gallery') renderGallery(currentMediaItems);
+            if(btn.id === 'nav-blog') renderBlogPosts();
+            if(btn.id === 'nav-store') renderStore();
+        }
+    };
+});
 
 // --- PROFILE ---
 if (profileImageInput) {
@@ -788,3 +816,195 @@ socket.on('media_deleted', () => loadMedia());
 socket.on('new_blog_post', post => { currentBlogPosts.unshift(post); renderBlogPosts(); renderReels(currentBlogPosts); });
 
 init();
+
+// --- TIENDA / E-COMMERCE ---
+const storeSection = document.getElementById('store-section');
+// navStore already declared at the top
+const storeGrid = document.getElementById('store-grid');
+const floatingCartBtn = document.getElementById('floating-cart-btn');
+const cartItemCount = document.getElementById('cart-item-count');
+const cartModal = document.getElementById('cart-modal');
+const closeCartBtn = document.getElementById('close-cart-btn');
+const cartItemsList = document.getElementById('cart-items-list');
+const cartSubtotalEl = document.getElementById('cart-subtotal');
+const cartDiscountEl = document.getElementById('cart-discount');
+const cartTotalEl = document.getElementById('cart-total');
+const checkoutBtn = document.getElementById('checkout-btn');
+const invoiceModal = document.getElementById('invoice-modal');
+const closeInvoiceBtn = document.getElementById('close-invoice-btn');
+const addProductBtn = document.getElementById('add-product-btn');
+const addProductModal = document.getElementById('add-product-modal');
+const saveProductBtn = document.getElementById('save-product-btn');
+const cancelProductBtn = document.getElementById('cancel-product-btn');
+
+let storeProducts = [
+    { id: 'bk1', name: 'Whopper®', price: 6.50, type: 'food', img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk2', name: 'Cheeseburger', price: 3.50, type: 'food', img: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk3', name: 'Patatas Clásicas', price: 2.50, type: 'food', img: 'https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk4', name: 'Aros de Cebolla', price: 3.00, type: 'food', img: 'https://images.unsplash.com/photo-1639024471210-5ba6cdbbfaec?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk5', name: 'Coca-Cola (Promo)', price: 2.20, type: 'drink', img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk6', name: 'Fanta Naranja (Promo)', price: 2.20, type: 'drink', img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=500&q=80' }
+];
+
+let cart = [];
+
+function renderStore() {
+    if (!storeGrid) return;
+    storeGrid.innerHTML = '';
+    storeProducts.forEach(product => {
+        const div = document.createElement('div');
+        div.className = 'product-card';
+        div.innerHTML = `
+            <img src="${product.img}" class="product-img" onerror="this.src='https://via.placeholder.com/300x200?text=BK+Item'">
+            <div class="product-info">
+                <span class="product-name">${product.name}</span>
+                <span class="product-price">${product.price.toFixed(2)} €</span>
+                <button class="add-to-cart-btn" onclick="addToCart('${product.id}')">Añadir al Carrito</button>
+            </div>
+        `;
+        storeGrid.appendChild(div);
+    });
+}
+
+window.addToCart = function(productId) {
+    const product = storeProducts.find(p => p.id === productId);
+    if (!product) return;
+    const existing = cart.find(i => i.id === productId);
+    if (existing) existing.qty++;
+    else cart.push({ ...product, qty: 1 });
+    updateCartUI();
+};
+
+window.changeQty = function(productId, delta) {
+    const item = cart.find(i => i.id === productId);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) cart = cart.filter(i => i.id !== productId);
+    updateCartUI();
+};
+
+function updateCartUI() {
+    const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+    cartItemCount.innerText = totalItems;
+    if (totalItems > 0 && storeSection && !storeSection.classList.contains('hidden')) {
+        floatingCartBtn.classList.remove('hidden');
+    } else {
+        floatingCartBtn.classList.add('hidden');
+    }
+
+    if (!cartItemsList) return;
+    cartItemsList.innerHTML = '';
+    let subtotal = 0;
+    let drinkCount = 0;
+    
+    cart.forEach(item => {
+        subtotal += item.price * item.qty;
+        if (item.type === 'drink') drinkCount += item.qty;
+        
+        const div = document.createElement('div');
+        div.className = 'cart-item';
+        div.innerHTML = `
+            <span>${item.name} x${item.qty}</span>
+            <div class="cart-item-controls">
+                <span>${(item.price * item.qty).toFixed(2)}€</span>
+                <button onclick="changeQty('${item.id}', -1)">-</button>
+                <button onclick="changeQty('${item.id}', 1)">+</button>
+            </div>
+        `;
+        cartItemsList.appendChild(div);
+    });
+
+    // 3x1 Drink Promo Calculation
+    let discount = 0;
+    if (drinkCount >= 3) {
+        const freeDrinks = Math.floor(drinkCount / 3) * 2; // For every 3 drinks, 2 are free
+        const drinkItems = cart.filter(i => i.type === 'drink');
+        if (drinkItems.length > 0) {
+            const avgDrinkPrice = drinkItems.reduce((s, i) => s + (i.price * i.qty), 0) / drinkCount;
+            discount = freeDrinks * avgDrinkPrice;
+        }
+    }
+
+    const total = subtotal - discount;
+    cartSubtotalEl.innerText = `${subtotal.toFixed(2)} €`;
+    cartDiscountEl.innerText = `-${discount.toFixed(2)} €`;
+    cartTotalEl.innerText = `${total.toFixed(2)} €`;
+}
+
+if (floatingCartBtn) floatingCartBtn.onclick = () => cartModal.classList.add('active');
+if (closeCartBtn) closeCartBtn.onclick = () => cartModal.classList.remove('active');
+
+if (checkoutBtn) {
+    checkoutBtn.onclick = () => {
+        if (cart.length === 0) return alert('El carrito está vacío.');
+        cartModal.classList.remove('active');
+        generateInvoice();
+    };
+}
+
+function generateInvoice() {
+    if (!invoiceModal) return;
+    const invDate = new Date().toLocaleString();
+    const invId = Math.floor(Math.random() * 1000000);
+    
+    document.getElementById('invoice-date').innerText = invDate;
+    document.getElementById('invoice-id').innerText = invId;
+    
+    const invoiceItems = document.getElementById('invoice-items');
+    invoiceItems.innerHTML = '';
+    let subtotal = 0;
+    let drinkCount = 0;
+    
+    cart.forEach(item => {
+        subtotal += item.price * item.qty;
+        if (item.type === 'drink') drinkCount += item.qty;
+        const div = document.createElement('div');
+        div.className = 'invoice-item-row';
+        div.innerHTML = `<span>${item.qty}x ${item.name.substring(0,15)}</span><span>${(item.price * item.qty).toFixed(2)}</span>`;
+        invoiceItems.appendChild(div);
+    });
+
+    let discount = 0;
+    if (drinkCount >= 3) {
+        const freeDrinks = Math.floor(drinkCount / 3) * 2;
+        const drinkItems = cart.filter(i => i.type === 'drink');
+        if (drinkItems.length > 0) discount = freeDrinks * (drinkItems.reduce((s, i) => s + (i.price * i.qty), 0) / drinkCount);
+    }
+
+    const total = subtotal - discount;
+    document.getElementById('inv-subtotal').innerText = subtotal.toFixed(2);
+    document.getElementById('inv-discount').innerText = '-' + discount.toFixed(2);
+    document.getElementById('inv-total').innerText = total.toFixed(2) + ' €';
+
+    invoiceModal.classList.add('active');
+    
+    cart = [];
+    updateCartUI();
+}
+
+if (closeInvoiceBtn) closeInvoiceBtn.onclick = () => invoiceModal.classList.remove('active');
+
+if (addProductBtn) addProductBtn.onclick = () => addProductModal.classList.add('active');
+if (cancelProductBtn) cancelProductBtn.onclick = () => { addProductModal.classList.remove('active'); };
+if (saveProductBtn) {
+    saveProductBtn.onclick = () => {
+        const name = document.getElementById('new-prod-name').value;
+        const price = parseFloat(document.getElementById('new-prod-price').value);
+        const type = document.getElementById('new-prod-type').value;
+        const img = document.getElementById('new-prod-img').value || 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=500&q=80';
+        
+        if (!name || isNaN(price)) return alert('Nombre y precio son obligatorios.');
+        
+        const newProd = { id: 'bk_' + Date.now(), name, price, type, img };
+        storeProducts.push(newProd);
+        renderStore();
+        addProductModal.classList.remove('active');
+        
+        document.getElementById('new-prod-name').value = '';
+        document.getElementById('new-prod-price').value = '';
+        document.getElementById('new-prod-img').value = '';
+    };
+}
+
+// Initial render for store
+renderStore();
