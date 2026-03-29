@@ -296,12 +296,12 @@ body.light-mode .history-section {
 .active-users-bar {
     display: flex;
     overflow-x: auto;
-    padding: 0.5rem 1rem;
-    gap: 1rem;
+    padding: 0.8rem 1rem;
+    gap: 1.2rem;
     scrollbar-width: none;
     -ms-overflow-style: none;
     background: rgba(0, 0, 0, 0.2);
-    min-height: 70px;
+    min-height: 90px;
     align-items: center;
 }
 .active-users-bar::-webkit-scrollbar { display: none; }
@@ -315,11 +315,11 @@ body.light-mode .history-section {
 .active-user-container:hover { transform: scale(1.1); }
 
 .active-user-circle {
-    width: 45px;
-    height: 45px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     border: 2px solid var(--secondary-accent);
-    padding: 2px;
+    padding: 3px;
     background: var(--glass);
     overflow: hidden;
 }
@@ -332,14 +332,14 @@ body.light-mode .history-section {
 
 .user-online-dot {
     position: absolute;
-    bottom: 2px;
-    right: 2px;
-    width: 12px;
-    height: 12px;
+    bottom: 3px;
+    right: 3px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
     background: #00ff00;
     border: 2px solid #000;
-    box-shadow: 0 0 8px #00ff00;
+    box-shadow: 0 0 10px #00ff00;
     z-index: 5;
 }
 
