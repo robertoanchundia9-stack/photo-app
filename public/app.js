@@ -207,9 +207,13 @@ if (closeRecorderBtn) closeRecorderBtn.onclick = stopCamera;
 if (startRecordBtn) {
     startRecordBtn.onclick = () => {
         recordedChunks = [];
-        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9') 
-                        ? 'video/webm;codecs=vp9' 
-                        : 'video/webm';
+        // Browser compatibility check
+        let mimeType = 'video/webm';
+        if (MediaRecorder.isTypeSupported('video/mp4')) {
+            mimeType = 'video/mp4';
+        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+            mimeType = 'video/webm;codecs=vp9';
+        }
         
         mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
         mediaRecorder.ondataavailable = (e) => {
@@ -235,11 +239,11 @@ function updateProgress() {
     if (recordingTimer) recordingTimer.innerText = `0:0${seconds}`;
     
     if (elapsed >= REEL_DURATION) {
-        stopVideoRecording();
+        stopRecording();
     }
 }
 
-function stopVideoRecording() {
+function stopRecording() {
     clearInterval(recordingInterval);
     if (mediaRecorder && mediaRecorder.state === 'recording') {
         mediaRecorder.stop();
@@ -252,9 +256,11 @@ function stopVideoRecording() {
 
 async function uploadReel() {
     if (uploadingReelStatus) uploadingReelStatus.classList.remove('hidden');
-    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+    // Use the actual mimeType of the recorder
+    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+    const extension = mediaRecorder.mimeType.split('/')[1].split(';')[0];
     const formData = new FormData();
-    formData.append('mediaFile', blob, `reel_${Date.now()}.webm`);
+    formData.append('mediaFile', blob, `reel_${Date.now()}.${extension}`);
     formData.append('author', userProfile.fullName);
     formData.append('authorPhoto', userProfile.photo);
     formData.append('userId', userProfile.userId);

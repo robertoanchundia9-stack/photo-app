@@ -47,7 +47,7 @@ const storage = new CloudinaryStorage({
     params: {
         folder: 'photo-app',
         resource_type: 'auto',
-        allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'mp4', 'mov']
+        allowed_formats: ['jpg', 'png', 'jpeg', 'gif', 'mp4', 'mov', 'webm']
     }
 });
 const upload = multer({ storage });
