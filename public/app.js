@@ -283,7 +283,7 @@ async function uploadReel() {
 
 function renderReels(posts) {
     if (!reelsList) return;
-    const reels = posts.filter(p => p.media && p.media.isReel);
+    const reels = posts.filter(p => p.media && p.media.isReel).slice(0, 4);
     reelsList.innerHTML = '';
     reels.forEach(reel => {
         const div = document.createElement('div');

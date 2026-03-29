@@ -298,16 +298,10 @@ body.light-mode .history-section {
     overflow-x: auto;
     padding: 1rem;
     gap: 1.2rem;
-    margin-bottom: 2rem;
+    margin-bottom: 3rem; /* Pushes the gallery down more */
     scrollbar-width: none;
     -ms-overflow-style: none;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-.reels-bar::-webkit-scrollbar { display: none; }
-
-.reels-list {
-    display: flex;
-    gap: 1.2rem;
 }
 
 .reel-item {
@@ -315,18 +309,17 @@ body.light-mode .history-section {
     flex-direction: column;
     align-items: center;
     gap: 0.5rem;
-    min-width: 75px;
+    min-width: 85px; /* Slightly wider */
     cursor: pointer;
     transition: transform 0.2s;
 }
-.reel-item:hover { transform: scale(1.05); }
 
 .reel-bubble {
-    width: 65px;
-    height: 65px;
-    border-radius: 50%;
+    width: 80px;
+    height: 120px; /* Rectangular 2:3 or similar */
+    border-radius: 12px; /* Rounded corners but not a circle */
     border: 3px solid #ff00ff;
-    padding: 3px;
+    padding: 2px;
     background: var(--glass);
     display: flex;
     align-items: center;
@@ -338,16 +331,12 @@ body.light-mode .history-section {
     border: 3px dashed #888;
     background: rgba(136, 136, 136, 0.1);
 }
-.reel-item.create-reel .plus-icon {
-    font-size: 2rem;
-    color: #888;
-}
 
 .reel-bubble img {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 50%;
+    border-radius: 10px;
 }
 
 .reel-item span {
