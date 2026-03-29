@@ -106,11 +106,16 @@ app.get('/api/blog', async (req, res) => {
 });
 
 app.post('/api/blog', upload.single('mediaFile'), async (req, res) => {
-    const { text, author, authorPhoto, userId } = req.body;
+    const { text, author, authorPhoto, userId, isReel } = req.body;
     let fileObj = null;
     if (req.file) {
         const isVideo = req.file.mimetype && req.file.mimetype.startsWith('video');
-        fileObj = { name: req.file.filename, url: req.file.path, type: isVideo ? 'video' : 'image' };
+        fileObj = { 
+            name: req.file.filename, 
+            url: req.file.path, 
+            type: isVideo ? 'video' : 'image',
+            isReel: isReel === 'true'
+        };
     }
     const postId = Date.now() + '-' + Math.round(Math.random() * 1000);
     const row = {
