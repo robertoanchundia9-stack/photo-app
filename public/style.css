@@ -383,23 +383,26 @@ body.light-mode .history-section {
     padding: 1rem !important;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    flex-wrap: nowrap !important;
-    white-space: nowrap !important; /* Force inline layout */
+    flex-direction: row !important; /* Force row direction */
+    flex-wrap: nowrap !important; /* Strictly forbid wrapping */
+    align-items: center; /* Keep heights consistent */
     background: transparent !important;
     min-height: 180px !important;
-    max-width: 100vw; /* Prevent overflow of parent */
+    width: 100%;
 }
 .reels-bar::-webkit-scrollbar { display: none; }
 
 .reel-item {
-    flex: 0 0 auto !important; /* Prevent shrinking and growing */
-    display: inline-flex !important;
+    flex: 0 0 auto !important; /* Do not grow, do not shrink, auto width */
+    display: flex !important; /* Re-enable flex layout inside item */
     flex-direction: column !important;
     align-items: center !important;
+    justify-content: center !important;
     gap: 0.8rem !important;
-    min-width: 100px !important;
+    min-width: 100px !important; /* Ensure min width for mobile */
     cursor: pointer;
 }
+
 
 
 /* --- REELS COMMENTS (Bottom Sheet Style) --- */
