@@ -88,6 +88,7 @@ const blogFeed = document.getElementById('blog-feed');
 
 // Users Elements
 const usersGrid = document.getElementById('users-grid');
+let allUsersData = [];
 
 // Bottom Nav Elements
 const navGallery = document.getElementById('nav-gallery');
@@ -109,7 +110,8 @@ function init() {
         socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
         registerUserOnServer(userProfile);
         loadMedia();
-        loadBlogPosts(); // This will also trigger renderReels
+        loadBlogPosts();
+        loadUsers(); 
     } else {
         profileModal.classList.add('active');
     }
@@ -168,6 +170,7 @@ if (saveProfileBtn) {
         socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
         loadMedia();
         loadBlogPosts();
+        loadUsers();
     });
 }
 
@@ -178,6 +181,81 @@ function updateHeaderProfile() {
         currentUserHeader.classList.remove('hidden');
     }
 }
+
+// --- USERS DIRECTORY ---
+async function loadUsers() {
+    try {
+        const res = await fetch('/api/users');
+        allUsersData = await res.json();
+        renderUsers(allUsersData);
+    } catch(e) {}
+}
+
+function renderUsers(users) {
+    if(!usersGrid) return;
+    usersGrid.innerHTML = '';
+    users.forEach(u => {
+        if (userProfile && u.userId === userProfile.userId) return;
+        const div = document.createElement('div');
+        div.className = 'user-card';
+        const statusClass = u.isOnline ? 'online' : 'offline';
+        div.innerHTML = `
+            <div class="user-avatar-container">
+                <img src="${u.photo}" class="user-card-avatar" alt="${u.fullName}">
+                <span class="status-dot ${statusClass}"></span>
+            </div>
+            <div class="user-card-name">${u.fullName}</div>
+            <button class="btn primary" style="width:100%; margin-top:0.5rem; font-size:0.7rem;" onclick="openPrivateChat('${u.userId}', '${u.fullName}')">💬 Chat</button>
+        `;
+        usersGrid.appendChild(div);
+    });
+}
+
+async function openPrivateChat(recipientId, recipientName) {
+    currentRecipientId = recipientId;
+    if(!privateChatHeader) return;
+    privateChatHeader.innerText = `Chat con ${recipientName}`;
+    privateChatMessages.innerHTML = '<div style="text-align:center; opacity:0.5;">Cargando...</div>';
+    privateChatModal.classList.add('active');
+    
+    try {
+        const res = await fetch(`/api/private-messages?user1=${userProfile.userId}&user2=${recipientId}`);
+        const history = await res.json();
+        privateChatMessages.innerHTML = '';
+        history.forEach(msg => appendPrivateMessage(msg));
+    } catch(e) {
+        privateChatMessages.innerHTML = '';
+    }
+}
+
+function sendPrivateMessage() {
+    const text = privateChatInput.value.trim();
+    if (text && userProfile && currentRecipientId) {
+        const msg = {
+            fromUserId: userProfile.userId,
+            fromUserName: userProfile.fullName,
+            toUserId: currentRecipientId,
+            text: text
+        };
+        socket.emit('private_message', msg);
+        appendPrivateMessage({ sender_id: userProfile.userId, sender_name: userProfile.fullName, text });
+        privateChatInput.value = '';
+    }
+}
+
+function appendPrivateMessage(msg) {
+    if(!privateChatMessages) return;
+    const isSelf = msg.sender_id === userProfile.userId;
+    const div = document.createElement('div');
+    div.className = `message ${isSelf ? 'self' : ''}`;
+    div.innerHTML = `${!isSelf ? `<div class="message-sender">${msg.sender_name}</div>` : ''}<div class="message-text">${msg.text}</div>`;
+    privateChatMessages.appendChild(div);
+    privateChatMessages.scrollTop = privateChatMessages.scrollHeight;
+}
+
+if(sendPrivateMsgBtn) sendPrivateMsgBtn.onclick = sendPrivateMessage;
+if(privateChatInput) privateChatInput.onkeypress = (e) => { if(e.key==='Enter') sendPrivateMessage(); };
+if(closePrivateChatBtn) closePrivateChatBtn.onclick = () => privateChatModal.classList.remove('active');
 
 // --- REELS LOGIC ---
 async function startCamera() {
@@ -207,7 +285,6 @@ if (closeRecorderBtn) closeRecorderBtn.onclick = stopCamera;
 if (startRecordBtn) {
     startRecordBtn.onclick = () => {
         recordedChunks = [];
-        // Browser compatibility check
         let mimeType = 'video/webm';
         if (MediaRecorder.isTypeSupported('video/mp4')) {
             mimeType = 'video/mp4';
@@ -256,7 +333,6 @@ function stopRecording() {
 
 async function uploadReel() {
     if (uploadingReelStatus) uploadingReelStatus.classList.remove('hidden');
-    // Use the actual mimeType of the recorder
     const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
     const extension = mediaRecorder.mimeType.split('/')[1].split(';')[0];
     const formData = new FormData();
@@ -273,7 +349,7 @@ async function uploadReel() {
         if (data.success) {
             if (uploadingReelStatus) uploadingReelStatus.classList.add('hidden');
             stopCamera();
-            loadBlogPosts(); // Use blog posts to handle reels
+            loadBlogPosts();
         }
     } catch (err) {
         alert('Error al subir el reel.');
@@ -374,14 +450,13 @@ async function loadBlogPosts() {
         const res = await fetch('/api/blog');
         currentBlogPosts = await res.json();
         renderBlogPosts();
-        renderReels(currentBlogPosts); // Reels are filtered from blog posts
+        renderReels(currentBlogPosts);
     } catch(err) {}
 }
 
 function renderBlogPosts() {
     if(!blogFeed) return;
     blogFeed.innerHTML = '';
-    // Filter out reels from the main blog feed if you want them separated
     const postsOnly = currentBlogPosts.filter(p => !p.media || !p.media.isReel);
     
     postsOnly.forEach(post => {
