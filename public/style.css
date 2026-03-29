@@ -157,21 +157,20 @@ body::before {
     border-radius: 20px 20px 0 0;
 }
 
-/* Watermark Background - FIXED FILENAME */
+/* Watermark Background - FULL SCREEN */
 .chat-messages::before {
     content: "";
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 250px;
-    height: 250px;
-    background-image: url('z1.jpeg'); /* Correct filename is z1.jpeg */
-    background-size: contain;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('z1.jpeg'); /* Correct filename */
+    background-size: cover; /* Covers the whole area */
     background-repeat: no-repeat;
     background-position: center;
-    opacity: 0.12; /* Slightly more visible but still a watermark */
-    filter: blur(1px) brightness(0.8);
+    opacity: 0.1; /* Very subtle and elegant */
+    filter: blur(2px) grayscale(50%);
     pointer-events: none;
     z-index: 0;
 }
@@ -485,6 +484,19 @@ body.light-mode .history-section {
     font-size: 0.8rem;
     color: #fff;
 }
+
+#chat-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.8rem 1.2rem;
+    border-radius: 25px;
+    color: #fff !important; /* Forces white text for readability */
+    font-size: 0.9rem;
+    outline: none;
+    transition: all 0.3s;
+}
+#chat-input:focus { border-color: #fff; }
 
 .btn-record {
     width: 70px;
