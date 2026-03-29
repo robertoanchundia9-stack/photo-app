@@ -1,15 +1,17 @@
 {
-  "name": "Zara Marina Varela",
-  "short_name": "Zara Marina Varela",
-  "start_url": ".",
+  "name": "Zaida Marina - Reels & Comunidad",
+  "short_name": "Zaida Marina",
+  "description": "App oficial de Zaida Marina - Reels, Comunidad y Galería",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#090a0f",
   "theme_color": "#ff00ff",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "z1.jpeg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]

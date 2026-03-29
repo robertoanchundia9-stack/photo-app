@@ -532,6 +532,33 @@ body.light-mode .history-section {
     flex-direction: column;
 }
 
+.reel-actions-overlay {
+    position: absolute;
+    right: 20px;
+    bottom: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    z-index: 10;
+}
+
+.reel-action-btn {
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 0.8rem;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.2rem;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: transform 0.2s;
+}
+.reel-action-btn:hover { transform: scale(1.1); }
+.reel-action-btn span { font-size: 0.7rem; font-weight: 700; }
+
 #reel-video-player {
     width: 100%;
     height: 100%;
@@ -546,9 +573,23 @@ body.light-mode .history-section {
     align-items: center;
     gap: 1rem;
     background: rgba(0,0,0,0.4);
-    padding: 0.8rem;
+    padding: 0.6rem 1.2rem;
     border-radius: 30px;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    z-index: 10;
+}
+
+/* --- SKELETONS --- */
+.skeleton {
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite linear;
+    border-radius: 12px;
+}
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 @media (max-width: 768px) {

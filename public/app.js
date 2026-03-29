@@ -64,6 +64,10 @@ let recordedChunks = [];
 let recordingInterval = null;
 let startTime = 0;
 const REEL_DURATION = 8000; // 8 seconds
+let currentReelId = null;
+const reelLikeBtn = document.getElementById('reel-like-btn');
+const reelLikeCount = document.getElementById('reel-like-count');
+const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
 // --- THEME ---
 if (themeToggle) {
@@ -402,12 +406,51 @@ function renderReels(posts) {
     });
 }
 
+async function loadMedia() {
+    galleryGrid.innerHTML = '<div class="skeleton" style="grid-column: 1/-1; height: 300px;"></div>';
+    try {
+        const res = await fetch('/api/media');
+        const media = await res.json();
+        renderGallery(media);
+    } catch(e) {}
+}
+
+async function loadBlog() {
+    reelsBar.innerHTML = `
+        <div class="reel-item create-reel" id="btn-open-recorder">
+            <div class="reel-bubble"><span>🎬</span></div>
+            <span>Graba</span>
+        </div>
+        <div class="reel-item skeleton" style="width: 90px; height: 140px; border-radius: 18px;"></div>
+        <div class="reel-item skeleton" style="width: 90px; height: 140px; border-radius: 18px;"></div>
+    `;
+    try {
+        const res = await fetch('/api/blog');
+        const posts = await res.json();
+        const reels = posts.filter(p => p.isReel).slice(0, 4);
+        renderReels(reels);
+        renderBlogPosts(posts.filter(p => !p.isReel));
+    } catch(e) {}
+}
+
 function openReelViewer(reel) {
-    if (!reelViewer) return;
+    currentReelId = reel.id;
     reelVideoPlayer.src = reel.media.url;
     reelAuthorImg.src = reel.authorPhoto || 'https://www.gravatar.com/avatar/0?d=mp';
     reelAuthorName.innerText = reel.author;
+    reelLikeCount.innerText = reel.likes || 0;
     reelViewer.classList.add('active');
+}
+
+if (reelLikeBtn) {
+    reelLikeBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (currentReelId) {
+            socket.emit('blog_toggle_like', { postId: currentReelId });
+            const count = parseInt(reelLikeCount.innerText) || 0;
+            reelLikeCount.innerText = count + 1;
+        }
+    };
 }
 
 if (closeReelViewer) {
@@ -605,13 +648,21 @@ socket.on('update_like', data => {
     const item = currentMediaItems.find(i => i.name === data.id); 
     if(item){ item.likes = data.likes; renderGallery(currentMediaItems); }
 });
-socket.on('chat_message', msg => appendMessage(msg, false));
+socket.on('chat_message', msg => {
+    appendMessage(msg, false);
+    if (userProfile && msg.sender !== userProfile.fullName) {
+        msgSound.play().catch(() => {});
+    }
+});
 
 socket.on('private_message', msg => {
     if (privateChatModal.classList.contains('active') && currentRecipientId === msg.sender_id) {
         appendPrivateMessage(msg);
     } else {
         alert(`Nuevo mensaje de ${msg.sender_name}: ${msg.text}`);
+    }
+    if (userProfile && msg.sender_id !== userProfile.userId) {
+        msgSound.play().catch(() => {});
     }
 });
 socket.on('user_joined', data => { 
@@ -620,8 +671,15 @@ socket.on('user_joined', data => {
     div.innerText=`${data.name} se unió`; chatMessages.appendChild(div); 
 });
 socket.on('blog_update_likes', data => {
+    if (currentReelId === data.postId) {
+        reelLikeCount.innerText = data.likes;
+    }
     const post = currentBlogPosts.find(p => p.id === data.postId);
-    if(post){ post.likes = data.likes; renderBlogPosts(); }
+    if (post) {
+        post.likes = data.likes;
+        renderBlogPosts();
+        renderReels(currentBlogPosts);
+    }
 });
 socket.on('blog_new_comment', data => {
     const post = currentBlogPosts.find(p => p.id === data.postId);
