@@ -375,7 +375,7 @@ body.light-mode .history-section {
     z-index: 5;
 }
 
-/* --- REELS BAR (Horizontal Line) --- */
+/* --- REELS BAR & LIST (Horizontal Line) --- */
 .reels-bar {
     display: flex !important;
     gap: 1rem !important;
@@ -383,25 +383,34 @@ body.light-mode .history-section {
     padding: 1rem !important;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    flex-direction: row !important; /* Force row direction */
-    flex-wrap: nowrap !important; /* Strictly forbid wrapping */
-    align-items: center; /* Keep heights consistent */
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    align-items: center;
     background: transparent !important;
     min-height: 180px !important;
     width: 100%;
 }
 .reels-bar::-webkit-scrollbar { display: none; }
 
+.reels-list {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 1rem !important;
+    align-items: center !important;
+}
+
 .reel-item {
     flex: 0 0 auto !important; /* Do not grow, do not shrink, auto width */
-    display: flex !important; /* Re-enable flex layout inside item */
+    display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 0.8rem !important;
-    min-width: 100px !important; /* Ensure min width for mobile */
+    min-width: 100px !important;
     cursor: pointer;
 }
+
 
 
 
