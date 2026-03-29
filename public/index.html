@@ -297,6 +297,19 @@
             </div>
             <div class="reel-actions-overlay">
                 <button id="reel-like-btn" class="reel-action-btn">❤️ <span id="reel-like-count">0</span></button>
+                <button id="reel-comment-btn" class="reel-action-btn">💬 <span id="reel-comment-count">0</span></button>
+            </div>
+            <!-- Reels Comments -->
+            <div class="reel-comments-section hidden" id="reel-comments-section">
+                <div class="reel-comments-header">
+                    <strong>Comentarios</strong>
+                    <button id="close-reel-comments" class="close-btn-small">&times;</button>
+                </div>
+                <div id="reel-comments-list" class="reel-comments-list"></div>
+                <div class="reel-comment-input-area">
+                    <input type="text" id="reel-comment-input" placeholder="Añade un comentario..." autocomplete="off">
+                    <button id="send-reel-comment">Publicar</button>
+                </div>
             </div>
         </div>
     </div>

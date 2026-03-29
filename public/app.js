@@ -67,6 +67,13 @@ const REEL_DURATION = 8000; // 8 seconds
 let currentReelId = null;
 const reelLikeBtn = document.getElementById('reel-like-btn');
 const reelLikeCount = document.getElementById('reel-like-count');
+const reelCommentBtn = document.getElementById('reel-comment-btn');
+const reelCommentCount = document.getElementById('reel-comment-count');
+const reelCommentsSection = document.getElementById('reel-comments-section');
+const reelCommentsList = document.getElementById('reel-comments-list');
+const reelCommentInput = document.getElementById('reel-comment-input');
+const sendReelCommentBtn = document.getElementById('send-reel-comment');
+const closeReelCommentsBtn = document.getElementById('close-reel-comments');
 const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
 
 // --- THEME ---
@@ -390,7 +397,8 @@ async function uploadReel() {
 
 function renderReels(posts) {
     if (!reelsList) return;
-    const reels = posts.filter(p => p.media && p.media.isReel).slice(0, 4);
+    // Sort reels chronologically (newest first) and do NOT slice (infinite line)
+    const reels = posts.filter(p => p.media && p.media.isReel).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
     reelsList.innerHTML = '';
     reels.forEach(reel => {
         const div = document.createElement('div');
@@ -406,14 +414,7 @@ function renderReels(posts) {
     });
 }
 
-async function loadMedia() {
-    galleryGrid.innerHTML = '<div class="skeleton" style="grid-column: 1/-1; height: 300px;"></div>';
-    try {
-        const res = await fetch('/api/media');
-        const media = await res.json();
-        renderGallery(media);
-    } catch(e) {}
-}
+// ... skip to loadBlog ...
 
 async function loadBlog() {
     reelsBar.innerHTML = `
@@ -427,7 +428,7 @@ async function loadBlog() {
     try {
         const res = await fetch('/api/blog');
         const posts = await res.json();
-        const reels = posts.filter(p => p.isReel).slice(0, 4);
+        const reels = posts.filter(p => p.isReel); // No .slice(0, 4) anymore
         renderReels(reels);
         renderBlogPosts(posts.filter(p => !p.isReel));
     } catch(e) {}
@@ -439,7 +440,29 @@ function openReelViewer(reel) {
     reelAuthorImg.src = reel.authorPhoto || 'https://www.gravatar.com/avatar/0?d=mp';
     reelAuthorName.innerText = reel.author;
     reelLikeCount.innerText = reel.likes || 0;
+    reelCommentCount.innerText = (reel.comments && reel.comments.length) ? reel.comments.length : 0;
+    reelCommentsSection.classList.add('hidden'); // Ensure comments are hidden when opening a new reel
+    renderReelComments(reel.comments || []);
     reelViewer.classList.add('active');
+}
+
+function renderReelComments(comments) {
+    if(!reelCommentsList) return;
+    reelCommentsList.innerHTML = '';
+    if(comments.length === 0){
+        reelCommentsList.innerHTML = '<div style="text-align:center; opacity:0.5; margin-top:2rem;">Sé el primero en comentar 💬</div>';
+        return;
+    }
+    comments.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'reel-comment-item';
+        div.innerHTML = `
+            <span class="reel-comment-author">${c.author}:</span>
+            <span class="reel-comment-text">${c.text}</span>
+        `;
+        reelCommentsList.appendChild(div);
+    });
+    reelCommentsList.scrollTop = reelCommentsList.scrollHeight;
 }
 
 if (reelLikeBtn) {
@@ -453,11 +476,57 @@ if (reelLikeBtn) {
     };
 }
 
+if (reelCommentBtn) {
+    reelCommentBtn.onclick = (e) => {
+        e.stopPropagation();
+        reelCommentsSection.classList.toggle('hidden');
+    };
+}
+
+if (closeReelCommentsBtn) {
+    closeReelCommentsBtn.onclick = (e) => {
+        e.stopPropagation();
+        reelCommentsSection.classList.add('hidden');
+    };
+}
+
+if (sendReelCommentBtn && reelCommentInput) {
+    const sendComment = () => {
+        const text = reelCommentInput.value.trim();
+        if (text && userProfile && currentReelId) {
+            const comment = { author: userProfile.fullName, text, createdAt: new Date() };
+            socket.emit('blog_new_comment', { postId: currentReelId, comment });
+            
+            // Optimistic UI update
+            const post = currentBlogPosts.find(p => p.id === currentReelId);
+            if(post) {
+                post.comments = post.comments || [];
+                post.comments.push(comment);
+                renderReelComments(post.comments);
+                reelCommentCount.innerText = post.comments.length;
+            } else {
+                // If it's pure reel data (not in blogposts)
+                const commentsList = Array.from(reelCommentsList.children);
+                if(commentsList.length === 1 && commentsList[0].innerText.includes('primero')) reelCommentsList.innerHTML = '';
+                const div = document.createElement('div');
+                div.className = 'reel-comment-item';
+                div.innerHTML = `<span class="reel-comment-author">${userProfile.fullName}:</span> <span class="reel-comment-text">${text}</span>`;
+                reelCommentsList.appendChild(div);
+                reelCommentCount.innerText = parseInt(reelCommentCount.innerText) + 1;
+            }
+            reelCommentInput.value = '';
+        }
+    };
+    sendReelCommentBtn.onclick = sendComment;
+    reelCommentInput.onkeypress = (e) => { if(e.key === 'Enter') sendComment(); };
+}
+
 if (closeReelViewer) {
     closeReelViewer.onclick = () => {
         reelVideoPlayer.pause();
         reelVideoPlayer.src = '';
         reelViewer.classList.remove('active');
+        reelCommentsSection.classList.add('hidden');
     };
 }
 
@@ -682,8 +751,26 @@ socket.on('blog_update_likes', data => {
     }
 });
 socket.on('blog_new_comment', data => {
+    // If the Reel viewer is currently open on this post, update it live
+    if (currentReelId === data.postId) {
+        const commentsList = Array.from(reelCommentsList.children);
+        if(commentsList.length === 1 && commentsList[0].innerText.includes('primero')) reelCommentsList.innerHTML = '';
+        
+        const div = document.createElement('div');
+        div.className = 'reel-comment-item';
+        div.innerHTML = `<span class="reel-comment-author">${data.comment.author}:</span> <span class="reel-comment-text">${data.comment.text}</span>`;
+        reelCommentsList.appendChild(div);
+        
+        const currentCount = parseInt(reelCommentCount.innerText) || 0;
+        reelCommentCount.innerText = currentCount + 1;
+        reelCommentsList.scrollTop = reelCommentsList.scrollHeight;
+    }
+
     const post = currentBlogPosts.find(p => p.id === data.postId);
-    if(post){ (post.comments = post.comments || []).push(data.comment); renderBlogPosts(); }
+    if(post) { 
+        (post.comments = post.comments || []).push(data.comment); 
+        renderBlogPosts(); 
+    }
 });
 socket.on('blog_post_deleted', data => {
     currentBlogPosts = currentBlogPosts.filter(p => p.id !== data.postId); renderBlogPosts();
