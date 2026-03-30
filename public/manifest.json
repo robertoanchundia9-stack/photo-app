@@ -1,17 +1,15 @@
 {
-  "name": "Zaida Marina - Reels & Comunidad",
+  "name": "Zaida Marina",
   "short_name": "Zaida Marina",
-  "description": "App oficial de Zaida Marina - Reels, Comunidad y Galería",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#090a0f",
   "theme_color": "#ff00ff",
-  "orientation": "portrait",
   "icons": [
     {
-      "src": "z1.jpeg",
+      "src": "icon.png",
       "sizes": "512x512",
-      "type": "image/jpeg",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

@@ -8,7 +8,7 @@
     <meta name="theme-color" content="#ff00ff">
     <link rel="icon" href="icon.png" type="image/png">
     <link rel="apple-touch-icon" href="icon.png">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <!-- Setup Profile Modal -->
@@ -84,23 +84,6 @@
                     </label>
                 </div>
             </header>
-
-            <!-- Active Users Bar -->
-            <div id="active-users-bar" class="active-users-bar"></div>
-
-            <!-- Reels Bar -->
-            <div class="reels-bar glass">
-                <div class="reel-item create-reel" id="btn-open-recorder">
-                    <div class="reel-bubble">
-                        <span class="plus-icon">+</span>
-                    </div>
-                    <span>Reel</span>
-                </div>
-                <div id="reels-list" class="reels-list">
-                    <!-- Reels bubbles will be injected here -->
-                </div>
-            </div>
-
             <div id="gallery-grid" class="gallery-grid">
                 <!-- Media items will be injected here -->
             </div>
@@ -132,29 +115,20 @@
             </div>
         </main>
 
-        <!-- Store Section -->
-        <main id="store-section" class="store-section hidden">
+        <!-- Users Section -->
+        <main id="users-section" class="users-section hidden">
             <header class="glass-header">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <h1 class="neon-title">🍔 Tienda</h1>
-                    <button id="add-product-btn" class="btn secondary" style="font-size: 0.8rem;">+ Añadir Producto</button>
-                </div>
-                <div class="promo-banner">🔥 PROMOCIÓN: ¡3x1 en Bebidas! 🔥</div>
+                <h1 class="neon-title">👥 Comunidad</h1>
             </header>
-            <div class="store-container">
-                <div id="store-grid" class="store-grid"></div>
+            <div class="users-container">
+                <div id="users-grid" class="users-grid"></div>
             </div>
-            
-            <!-- Floating Cart Button -->
-            <button id="floating-cart-btn" class="floating-cart-btn hidden">
-                🛒 <span id="cart-item-count" class="cart-badge">0</span>
-            </button>
         </main>
 
         <!-- History / Bio Section -->
         <main id="history-section" class="history-section hidden">
             <div class="bio-hero">
-                <img src="z3.png?v=1" class="hero-img" alt="Zaida Marina">
+                <img src="z3.jpg" class="hero-img" alt="Zaida Marina">
                 <div class="hero-text">
                     <h1 class="pastel-title">Zaida Marina Varela</h1>
                     <p class="subtitle">Historia y Esencia</p>
@@ -176,7 +150,7 @@
 
                 <section class="bio-card story-card">
                     <div class="story-content">
-                        <img src="z1.jpeg?v=1" class="story-img left">
+                        <img src="z1.jpg" class="story-img left">
                         <div class="story-text">
                             <h3>🥀 Infancia: frío por fuera… y por dentro</h3>
                             <p>Zaida creció en Bergen, entre lluvia constante y cielos grises. Pero el verdadero frío no estaba fuera… estaba en casa.</p>
@@ -186,7 +160,7 @@
                     </div>
                     
                     <div class="story-content reverse">
-                        <img src="z5.png?v=1" class="story-img right">
+                        <img src="z4.jpg" class="story-img right">
                         <div class="story-text">
                             <h3>🔥 Adolescencia y Despertar</h3>
                             <p>A los 15 años, algo hizo clic. Empezó a grabarse con un móvil. Sin seguidores, solo quería sentirse escuchada… aunque fuera por ella misma.</p>
@@ -196,16 +170,16 @@
                     </div>
 
                     <div class="story-content">
-                        <img src="z2.png?v=1" class="story-img full">
+                        <img src="z2.jpg" class="story-img full">
                         <div class="story-text">
                             <h3>🌱 El cambio y Castilruiz</h3>
-                            <p>A los 24 años, un vídeo suyo se hizo real. Personas empezaron a escribirle: "Esto soy real." Ahí entendió su valor.</p>
+                            <p>A los 24 años, un vídeo suyo se hizo real. Personas empezaron a escribirle: "Esto soy yo." Ahí entendió su valor.</p>
                             <p>A los 26 llega a <strong>Castilruiz</strong>. Busca calma y encuentra verdad. Menos ruido, más conexión.</p>
                         </div>
                     </div>
 
                     <div class="story-content reverse">
-                        <img src="z4.png?v=1" class="story-img small">
+                        <img src="z5.jpg" class="story-img small">
                         <div class="story-text">
                             <h3>📱 Hoy y su Propósito</h3>
                             <p>Reflexiones profundas, experiencias reales sin maquillaje. Zaida no quiere aparentar. Quiere conectar.</p>
@@ -260,9 +234,9 @@
                 <span class="nav-icon">📖</span>
                 <span class="nav-label">Blog</span>
             </button>
-            <button id="nav-store" class="nav-item">
-                <span class="nav-icon">🛒</span>
-                <span class="nav-label">Tienda</span>
+            <button id="nav-users" class="nav-item">
+                <span class="nav-icon">👥</span>
+                <span class="nav-label">Gente</span>
             </button>
             <button id="nav-history" class="nav-item">
                 <span class="nav-icon">✨</span>
@@ -275,130 +249,11 @@
         </nav>
     </div>
 
-    <!-- Reels Recording Modal -->
-    <div id="recorder-modal" class="modal">
-        <div class="recorder-container glass">
-            <div class="recorder-header">
-                <h3>Grabar Reel (8s)</h3>
-                <button id="close-recorder-btn" class="close-btn">&times;</button>
-            </div>
-            <div class="viewfinder-wrapper">
-                <video id="viewfinder" autoplay muted playsinline></video>
-                <div id="recording-progress" class="progress-bar"></div>
-                <div id="recording-timer" class="timer">0:00</div>
-            </div>
-            <div class="recorder-actions">
-                <button id="start-record-btn" class="btn-record">🔴</button>
-                <button id="stop-record-btn" class="btn secondary hidden">Stop</button>
-                <div id="uploading-reel-status" class="hidden">Subiendo... 🚀</div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Reels Viewer -->
-    <div id="reel-viewer" class="modal viewer-modal">
-        <div class="reel-viewer-container">
-            <button id="close-reel-viewer" class="close-btn">&times;</button>
-            <video id="reel-video-player" autoplay loop playsinline></video>
-            <div class="reel-author-info">
-                <img id="reel-author-img" src="" class="header-avatar">
-                <span id="reel-author-name"></span>
-            </div>
-            <div class="reel-actions-overlay">
-                <button id="reel-like-btn" class="reel-action-btn">❤️ <span id="reel-like-count">0</span></button>
-                <button id="reel-comment-btn" class="reel-action-btn">💬 <span id="reel-comment-count">0</span></button>
-            </div>
-            <!-- Reels Comments -->
-            <div class="reel-comments-section hidden" id="reel-comments-section">
-                <div class="reel-comments-header">
-                    <strong>Comentarios</strong>
-                    <button id="close-reel-comments" class="close-btn-small">&times;</button>
-                </div>
-                <div id="reel-comments-list" class="reel-comments-list"></div>
-                <div class="reel-comment-input-area">
-                    <input type="text" id="reel-comment-input" placeholder="Añade un comentario..." autocomplete="off">
-                    <button id="send-reel-comment">Publicar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cart Modal -->
-    <div id="cart-modal" class="modal">
-        <div class="cart-container glass">
-            <div class="cart-header">
-                <h3>Tu Pedido 🍔</h3>
-                <button id="close-cart-btn" class="close-btn">&times;</button>
-            </div>
-            <div id="cart-items-list" class="cart-items-list">
-                <!-- Cart items will be injected here -->
-            </div>
-            <div class="cart-summary">
-                <div class="summary-line"><span>Subtotal:</span> <span id="cart-subtotal">0.00 €</span></div>
-                <div class="summary-line discount-line"><span>Promo (3x1 Bebidas):</span> <span id="cart-discount">-0.00 €</span></div>
-                <div class="summary-line total-line"><span>Total:</span> <span id="cart-total">0.00 €</span></div>
-            </div>
-            <button id="checkout-btn" class="btn primary checkout-btn">Pagar Pedido</button>
-        </div>
-    </div>
-
-    <!-- Invoice Modal -->
-    <div id="invoice-modal" class="modal">
-        <div class="invoice-container">
-            <div class="invoice-receipt">
-                <div class="invoice-header">
-                    <h2>BURGER KING®</h2>
-                    <p>¡Gracias por tu compra!</p>
-                    <p class="invoice-date" id="invoice-date"></p>
-                    <p class="invoice-order">Pedido #<span id="invoice-id"></span></p>
-                </div>
-                <div class="invoice-body">
-                    <div class="invoice-table-header">
-                        <span>Cant - Concepto</span>
-                        <span>Importe</span>
-                    </div>
-                    <div id="invoice-items" class="invoice-items-list"></div>
-                    <div class="invoice-totals">
-                        <div class="inv-line"><span>Subtotal:</span> <span id="inv-subtotal"></span></div>
-                        <div class="inv-line"><span>Desc (3x1):</span> <span id="inv-discount"></span></div>
-                        <div class="inv-line inv-total"><span>TOTAL:</span> <span id="inv-total"></span></div>
-                    </div>
-                </div>
-                <div class="invoice-footer">
-                    <p>Atendido por: Zaida Marina</p>
-                    <button id="close-invoice-btn" class="btn secondary">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Add Product Modal (Admin) -->
-    <div id="add-product-modal" class="modal">
-        <div class="modal-content glass">
-            <h2>Añadir Producto</h2>
-            <div class="input-group">
-                <input type="text" id="new-prod-name" placeholder="Nombre del Producto">
-            </div>
-            <div class="input-group">
-                <input type="number" id="new-prod-price" placeholder="Precio (€)" step="0.01">
-            </div>
-            <div class="input-group">
-                <select id="new-prod-type">
-                    <option value="food">Comida/Otro</option>
-                    <option value="drink">Bebida (Aplica 3x1)</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <input type="text" id="new-prod-img" placeholder="URL de Imagen (Opcional)">
-            </div>
-            <button id="save-product-btn" class="btn primary">Guardar</button>
-            <button id="cancel-product-btn" class="btn secondary">Cancelar</button>
-        </div>
-    </div>
 
     <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
-    <script src="app.js?v=7"></script>
+    <script src="app.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js')
