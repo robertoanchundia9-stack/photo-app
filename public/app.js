@@ -40,7 +40,43 @@ const privateChatInput = document.getElementById('private-chat-input');
 const sendPrivateMsgBtn = document.getElementById('send-private-msg-btn');
 let currentRecipientId = null;
 
-// Theme toggle logic
+// --- REELS ELEMENTS ---
+const btnOpenRecorder = document.getElementById('btn-open-recorder');
+const recorderModal = document.getElementById('recorder-modal');
+const closeRecorderBtn = document.getElementById('close-recorder-btn');
+const viewfinder = document.getElementById('viewfinder');
+const startRecordBtn = document.getElementById('start-record-btn');
+const recordingProgress = document.getElementById('recording-progress');
+const recordingTimer = document.getElementById('recording-timer');
+const uploadingReelStatus = document.getElementById('uploading-reel-status');
+const reelsList = document.getElementById('reels-list');
+
+const reelViewer = document.getElementById('reel-viewer');
+const closeReelViewer = document.getElementById('close-reel-viewer');
+const reelVideoPlayer = document.getElementById('reel-video-player');
+const reelAuthorImg = document.getElementById('reel-author-img');
+const reelAuthorName = document.getElementById('reel-author-name');
+const activeUsersBar = document.getElementById('active-users-bar');
+
+let mediaStream = null;
+let mediaRecorder = null;
+let recordedChunks = [];
+let recordingInterval = null;
+let startTime = 0;
+const REEL_DURATION = 8000; // 8 seconds
+let currentReelId = null;
+const reelLikeBtn = document.getElementById('reel-like-btn');
+const reelLikeCount = document.getElementById('reel-like-count');
+const reelCommentBtn = document.getElementById('reel-comment-btn');
+const reelCommentCount = document.getElementById('reel-comment-count');
+const reelCommentsSection = document.getElementById('reel-comments-section');
+const reelCommentsList = document.getElementById('reel-comments-list');
+const reelCommentInput = document.getElementById('reel-comment-input');
+const sendReelCommentBtn = document.getElementById('send-reel-comment');
+const closeReelCommentsBtn = document.getElementById('close-reel-comments');
+const msgSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3');
+
+// --- THEME ---
 if (themeToggle) {
     themeToggle.addEventListener('click', () => {
         document.body.classList.toggle('light-mode');
@@ -51,10 +87,10 @@ if (themeToggle) {
 // Sections
 const gallerySection = document.getElementById('gallery-section');
 const blogSection = document.getElementById('blog-section');
-const usersSection = document.getElementById('users-section');
+const storeSection = document.getElementById('store-section');
 const historySection = document.getElementById('history-section');
 
-// Blog Elements
+// Blog/Feed Elements
 const backToGalleryBtn = document.getElementById('back-to-gallery-btn');
 const blogTextInput = document.getElementById('blog-text-input');
 const blogMediaInput = document.getElementById('blog-media-input');
@@ -64,46 +100,77 @@ const blogFeed = document.getElementById('blog-feed');
 
 // Users Elements
 const usersGrid = document.getElementById('users-grid');
+let allUsersData = [];
 
 // Bottom Nav Elements
 const navGallery = document.getElementById('nav-gallery');
 const navBlog = document.getElementById('nav-blog');
-const navUsers = document.getElementById('nav-users');
+const navStore = document.getElementById('nav-store');
 const navHistory = document.getElementById('nav-history');
 const navChat = document.getElementById('nav-chat');
-const navItems = [navGallery, navBlog, navUsers, navHistory, navChat];
+const navItems = [navGallery, navBlog, navStore, navHistory, navChat];
 
 let userProfile = null;
 
 // --- INITIALIZATION ---
 function init() {
-    const appLayout = document.querySelector('.app-layout');
     const savedProfile = localStorage.getItem('photoApp_userProfile');
     if (savedProfile) {
         userProfile = JSON.parse(savedProfile);
         profileModal.classList.remove('active');
-        if (appLayout) appLayout.style.display = '';  // mostrar app
         updateHeaderProfile();
         socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
         registerUserOnServer(userProfile);
         loadMedia();
+        loadBlogPosts();
+        loadUsers(); 
     } else {
         profileModal.classList.add('active');
-        if (appLayout) appLayout.style.display = 'none'; // ocultar app hasta perfil listo
     }
 }
 
-// --- PROFILE ---
-profileImageInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            profilePicPreview.innerHTML = `<img src="${event.target.result}" alt="Preview">`;
-        };
-        reader.readAsDataURL(file);
-    }
+// Navigation
+const pages = {
+    'nav-gallery': gallerySection,
+    'nav-blog': blogSection,
+    'nav-store': storeSection,
+    'nav-history': historySection
+};
+
+document.querySelectorAll('.nav-item').forEach(btn => {
+    if(btn.id === 'nav-chat') return; // Chat is a sidebar, not a page
+    btn.onclick = () => {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        // Hide all main sections
+        Object.values(pages).forEach(page => {
+            if(page) page.classList.add('hidden');
+        });
+        
+        // Show selected section
+        if (pages[btn.id]) {
+            pages[btn.id].classList.remove('hidden');
+            if(btn.id === 'nav-gallery') renderGallery(currentMediaItems);
+            if(btn.id === 'nav-blog') renderBlogPosts();
+            if(btn.id === 'nav-store') renderStore();
+        }
+    };
 });
+
+// --- PROFILE ---
+if (profileImageInput) {
+    profileImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                profilePicPreview.innerHTML = `<img src="${event.target.result}" alt="Preview">`;
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+}
 
 async function registerUserOnServer(profile) {
     try {
@@ -115,36 +182,38 @@ async function registerUserOnServer(profile) {
     } catch(e) {}
 }
 
-saveProfileBtn.addEventListener('click', async () => {
-    const firstName = firstNameInput.value.trim();
-    const lastName = lastNameInput.value.trim();
-    const file = profileImageInput.files[0];
-    if (!firstName || !lastName) return alert('Nombre y apellido obligatorios.');
+if (saveProfileBtn) {
+    saveProfileBtn.addEventListener('click', async () => {
+        const firstName = firstNameInput.value.trim();
+        const lastName = lastNameInput.value.trim();
+        const file = profileImageInput.files[0];
+        if (!firstName || !lastName) return alert('Nombre y apellido obligatorios.');
 
-    let photoUrl = 'https://www.gravatar.com/avatar/0?d=mp';
-    if (file) {
-        const formData = new FormData();
-        formData.append('mediaFile', file);
-        saveProfileBtn.innerText = 'Subiendo...';
-        try {
-            const res = await fetch('/api/profile-photo', { method: 'POST', body: formData });
-            const data = await res.json();
-            photoUrl = data.url;
-        } catch (e) {}
-    }
+        let photoUrl = 'https://www.gravatar.com/avatar/0?d=mp';
+        if (file) {
+            const formData = new FormData();
+            formData.append('mediaFile', file);
+            saveProfileBtn.innerText = 'Subiendo...';
+            try {
+                const res = await fetch('/api/profile-photo', { method: 'POST', body: formData });
+                const data = await res.json();
+                photoUrl = data.url;
+            } catch (e) {}
+        }
 
-    const userId = 'u_' + Math.random().toString(36).substr(2, 9);
-    userProfile = { userId, firstName, lastName, fullName: `${firstName} ${lastName}`, photo: photoUrl };
-    localStorage.setItem('photoApp_userProfile', JSON.stringify(userProfile));
-    
-    registerUserOnServer(userProfile);
-    profileModal.classList.remove('active');
-    const appLayout = document.querySelector('.app-layout');
-    if (appLayout) appLayout.style.display = ''; // mostrar app
-    updateHeaderProfile();
-    socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
-    loadMedia();
-});
+        const userId = 'u_' + Math.random().toString(36).substr(2, 9);
+        userProfile = { userId, firstName, lastName, fullName: `${firstName} ${lastName}`, photo: photoUrl };
+        localStorage.setItem('photoApp_userProfile', JSON.stringify(userProfile));
+        
+        registerUserOnServer(userProfile);
+        profileModal.classList.remove('active');
+        updateHeaderProfile();
+        socket.emit('user_join', { userId: userProfile.userId, name: userProfile.fullName, photo: userProfile.photo });
+        loadMedia();
+        loadBlogPosts();
+        loadUsers();
+    });
+}
 
 function updateHeaderProfile() {
     if (userProfile && currentUserHeader) {
@@ -155,19 +224,45 @@ function updateHeaderProfile() {
 }
 
 // --- USERS DIRECTORY ---
-let allUsersData = [];
 async function loadUsers() {
     try {
         const res = await fetch('/api/users');
         allUsersData = await res.json();
         renderUsers(allUsersData);
+        renderActiveUsers(allUsersData);
     } catch(e) {}
 }
 
+function renderActiveUsers(users) {
+    if (!activeUsersBar) return;
+    const onlineOthers = users.filter(u => u.isOnline && (!userProfile || u.userId !== userProfile.userId));
+    activeUsersBar.innerHTML = '';
+    
+    if (onlineOthers.length === 0) {
+        activeUsersBar.style.display = 'none';
+        return;
+    }
+    
+    activeUsersBar.style.display = 'flex';
+    onlineOthers.forEach(u => {
+        const div = document.createElement('div');
+        div.className = 'active-user-container';
+        div.onclick = () => openPrivateChat(u.userId, u.fullName);
+        div.innerHTML = `
+            <div class="active-user-circle">
+                <img src="${u.photo}" alt="${u.fullName}">
+                <div class="user-online-dot"></div>
+            </div>
+        `;
+        activeUsersBar.appendChild(div);
+    });
+}
+
 function renderUsers(users) {
+    if(!usersGrid) return;
     usersGrid.innerHTML = '';
     users.forEach(u => {
-        if (userProfile && u.userId === userProfile.userId) return; // Don't show self
+        if (userProfile && u.userId === userProfile.userId) return;
         const div = document.createElement('div');
         div.className = 'user-card';
         const statusClass = u.isOnline ? 'online' : 'offline';
@@ -185,6 +280,7 @@ function renderUsers(users) {
 
 async function openPrivateChat(recipientId, recipientName) {
     currentRecipientId = recipientId;
+    if(!privateChatHeader) return;
     privateChatHeader.innerText = `Chat con ${recipientName}`;
     privateChatMessages.innerHTML = '<div style="text-align:center; opacity:0.5;">Cargando...</div>';
     privateChatModal.classList.add('active');
@@ -215,6 +311,7 @@ function sendPrivateMessage() {
 }
 
 function appendPrivateMessage(msg) {
+    if(!privateChatMessages) return;
     const isSelf = msg.sender_id === userProfile.userId;
     const div = document.createElement('div');
     div.className = `message ${isSelf ? 'self' : ''}`;
@@ -223,9 +320,244 @@ function appendPrivateMessage(msg) {
     privateChatMessages.scrollTop = privateChatMessages.scrollHeight;
 }
 
-sendPrivateMsgBtn.onclick = sendPrivateMessage;
-privateChatInput.onkeypress = (e) => { if(e.key==='Enter') sendPrivateMessage(); };
-closePrivateChatBtn.onclick = () => privateChatModal.classList.remove('active');
+if(sendPrivateMsgBtn) sendPrivateMsgBtn.onclick = sendPrivateMessage;
+if(privateChatInput) privateChatInput.onkeypress = (e) => { if(e.key==='Enter') sendPrivateMessage(); };
+if(closePrivateChatBtn) closePrivateChatBtn.onclick = () => privateChatModal.classList.remove('active');
+
+// --- REELS LOGIC ---
+async function startCamera() {
+    try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: 'user', width: 720, height: 1280 }, 
+            audio: true 
+        });
+        viewfinder.srcObject = mediaStream;
+        recorderModal.classList.add('active');
+    } catch (err) {
+        alert('No se pudo acceder a la cámara o micrófono. Asegúrate de dar permisos.');
+    }
+}
+
+function stopCamera() {
+    if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+    }
+    recorderModal.classList.remove('active');
+}
+
+if (btnOpenRecorder) btnOpenRecorder.onclick = startCamera;
+if (closeRecorderBtn) closeRecorderBtn.onclick = stopCamera;
+
+if (startRecordBtn) {
+    startRecordBtn.onclick = () => {
+        recordedChunks = [];
+        let mimeType = 'video/webm';
+        if (MediaRecorder.isTypeSupported('video/mp4')) {
+            mimeType = 'video/mp4';
+        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+            mimeType = 'video/webm;codecs=vp9';
+        }
+        
+        mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
+        mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) recordedChunks.push(e.data);
+        };
+        mediaRecorder.onstop = uploadReel;
+        
+        mediaRecorder.start();
+        startRecordBtn.classList.add('recording');
+        startRecordBtn.disabled = true;
+        
+        startTime = Date.now();
+        recordingInterval = setInterval(updateProgress, 100);
+    };
+}
+
+function updateProgress() {
+    const elapsed = Date.now() - startTime;
+    const progress = (elapsed / REEL_DURATION) * 100;
+    
+    if (recordingProgress) recordingProgress.style.width = Math.min(progress, 100) + '%';
+    const seconds = (elapsed / 1000).toFixed(1);
+    if (recordingTimer) recordingTimer.innerText = `0:0${seconds}`;
+    
+    if (elapsed >= REEL_DURATION) {
+        stopRecording();
+    }
+}
+
+function stopRecording() {
+    clearInterval(recordingInterval);
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+    }
+    startRecordBtn.classList.remove('recording');
+    startRecordBtn.disabled = false;
+    if (recordingProgress) recordingProgress.style.width = '0%';
+    if (recordingTimer) recordingTimer.innerText = '0:00';
+}
+
+async function uploadReel() {
+    if (uploadingReelStatus) uploadingReelStatus.classList.remove('hidden');
+    const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType });
+    const extension = mediaRecorder.mimeType.split('/')[1].split(';')[0];
+    const formData = new FormData();
+    formData.append('mediaFile', blob, `reel_${Date.now()}.${extension}`);
+    formData.append('author', userProfile.fullName);
+    formData.append('authorPhoto', userProfile.photo);
+    formData.append('userId', userProfile.userId);
+    formData.append('text', '🎬 Nuevo Reel');
+    formData.append('isReel', 'true');
+
+    try {
+        const res = await fetch('/api/blog', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+            if (uploadingReelStatus) uploadingReelStatus.classList.add('hidden');
+            stopCamera();
+            loadBlogPosts();
+        }
+    } catch (err) {
+        alert('Error al subir el reel.');
+        if (uploadingReelStatus) uploadingReelStatus.classList.add('hidden');
+    }
+}
+
+function renderReels(posts) {
+    if (!reelsList) return;
+    // Sort reels chronologically (newest first) and do NOT slice (infinite line)
+    const reels = posts.filter(p => p.media && p.media.isReel).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+    reelsList.innerHTML = '';
+    reels.forEach(reel => {
+        const div = document.createElement('div');
+        div.className = 'reel-item';
+        div.onclick = () => openReelViewer(reel);
+        div.innerHTML = `
+            <div class="reel-bubble">
+                <img src="${reel.authorPhoto || 'https://www.gravatar.com/avatar/0?d=mp'}" alt="${reel.author}">
+            </div>
+            <span>${reel.author.split(' ')[0]}</span>
+        `;
+        reelsList.appendChild(div);
+    });
+}
+
+// ... skip to loadBlog ...
+
+async function loadBlog() {
+    reelsBar.innerHTML = `
+        <div class="reel-item create-reel" id="btn-open-recorder">
+            <div class="reel-bubble"><span>🎬</span></div>
+            <span>Graba</span>
+        </div>
+        <div class="reel-item skeleton" style="width: 90px; height: 140px; border-radius: 18px;"></div>
+        <div class="reel-item skeleton" style="width: 90px; height: 140px; border-radius: 18px;"></div>
+    `;
+    try {
+        const res = await fetch('/api/blog');
+        const posts = await res.json();
+        const reels = posts.filter(p => p.isReel); // No .slice(0, 4) anymore
+        renderReels(reels);
+        renderBlogPosts(posts.filter(p => !p.isReel));
+    } catch(e) {}
+}
+
+function openReelViewer(reel) {
+    currentReelId = reel.id;
+    reelVideoPlayer.src = reel.media.url;
+    reelAuthorImg.src = reel.authorPhoto || 'https://www.gravatar.com/avatar/0?d=mp';
+    reelAuthorName.innerText = reel.author;
+    reelLikeCount.innerText = reel.likes || 0;
+    reelCommentCount.innerText = (reel.comments && reel.comments.length) ? reel.comments.length : 0;
+    reelCommentsSection.classList.add('hidden'); // Ensure comments are hidden when opening a new reel
+    renderReelComments(reel.comments || []);
+    reelViewer.classList.add('active');
+}
+
+function renderReelComments(comments) {
+    if(!reelCommentsList) return;
+    reelCommentsList.innerHTML = '';
+    if(comments.length === 0){
+        reelCommentsList.innerHTML = '<div style="text-align:center; opacity:0.5; margin-top:2rem;">Sé el primero en comentar 💬</div>';
+        return;
+    }
+    comments.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'reel-comment-item';
+        div.innerHTML = `
+            <span class="reel-comment-author">${c.author}:</span>
+            <span class="reel-comment-text">${c.text}</span>
+        `;
+        reelCommentsList.appendChild(div);
+    });
+    reelCommentsList.scrollTop = reelCommentsList.scrollHeight;
+}
+
+if (reelLikeBtn) {
+    reelLikeBtn.onclick = (e) => {
+        e.stopPropagation();
+        if (currentReelId) {
+            socket.emit('blog_toggle_like', { postId: currentReelId });
+            const count = parseInt(reelLikeCount.innerText) || 0;
+            reelLikeCount.innerText = count + 1;
+        }
+    };
+}
+
+if (reelCommentBtn) {
+    reelCommentBtn.onclick = (e) => {
+        e.stopPropagation();
+        reelCommentsSection.classList.toggle('hidden');
+    };
+}
+
+if (closeReelCommentsBtn) {
+    closeReelCommentsBtn.onclick = (e) => {
+        e.stopPropagation();
+        reelCommentsSection.classList.add('hidden');
+    };
+}
+
+if (sendReelCommentBtn && reelCommentInput) {
+    const sendComment = () => {
+        const text = reelCommentInput.value.trim();
+        if (text && userProfile && currentReelId) {
+            const comment = { author: userProfile.fullName, text, createdAt: new Date() };
+            socket.emit('blog_new_comment', { postId: currentReelId, comment });
+            
+            // Optimistic UI update
+            const post = currentBlogPosts.find(p => p.id === currentReelId);
+            if(post) {
+                post.comments = post.comments || [];
+                post.comments.push(comment);
+                renderReelComments(post.comments);
+                reelCommentCount.innerText = post.comments.length;
+            } else {
+                // If it's pure reel data (not in blogposts)
+                const commentsList = Array.from(reelCommentsList.children);
+                if(commentsList.length === 1 && commentsList[0].innerText.includes('primero')) reelCommentsList.innerHTML = '';
+                const div = document.createElement('div');
+                div.className = 'reel-comment-item';
+                div.innerHTML = `<span class="reel-comment-author">${userProfile.fullName}:</span> <span class="reel-comment-text">${text}</span>`;
+                reelCommentsList.appendChild(div);
+                reelCommentCount.innerText = parseInt(reelCommentCount.innerText) + 1;
+            }
+            reelCommentInput.value = '';
+        }
+    };
+    sendReelCommentBtn.onclick = sendComment;
+    reelCommentInput.onkeypress = (e) => { if(e.key === 'Enter') sendComment(); };
+}
+
+if (closeReelViewer) {
+    closeReelViewer.onclick = () => {
+        reelVideoPlayer.pause();
+        reelVideoPlayer.src = '';
+        reelViewer.classList.remove('active');
+        reelCommentsSection.classList.add('hidden');
+    };
+}
 
 // --- GALLERY ---
 let currentMediaItems = [];
@@ -238,6 +570,7 @@ async function loadMedia() {
 }
 
 function renderGallery(mediaItems) {
+    if(!galleryGrid) return;
     galleryGrid.innerHTML = '';
     mediaItems.forEach(item => {
         const isOwner = userProfile && (item.userId === userProfile.userId);
@@ -249,7 +582,6 @@ function renderGallery(mediaItems) {
             </div>
             <div class="card-overlay">
                 <button class="like-btn" onclick="event.stopPropagation(); socket.emit('toggle_like', { id: '${item.name}' })">❤️ <span>${item.likes || 0}</span></button>
-                ${isOwner ? `<button class="delete-btn" onclick="event.stopPropagation(); if(confirm('¿Borrar?')) socket.emit('delete_media', { id: '${item.name}' })">🗑️</button>` : ''}
             </div>
         `;
         galleryGrid.appendChild(div);
@@ -265,32 +597,37 @@ window.openViewerByName = (name) => {
     viewerModal.classList.add('active');
 };
 
-closeViewerBtn.onclick = () => { viewerModal.classList.remove('active'); viewerMediaContainer.innerHTML = ''; };
+if (closeViewerBtn) closeViewerBtn.onclick = () => { viewerModal.classList.remove('active'); viewerMediaContainer.innerHTML = ''; };
 
-uploadInput.onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !userProfile) return;
-    const formData = new FormData();
-    formData.append('mediaFile', file);
-    formData.append('userId', userProfile.userId);
-    try { await fetch('/api/upload', { method: 'POST', body: formData }); } catch(err) {}
-    uploadInput.value = '';
-};
+if (uploadInput) {
+    uploadInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file || !userProfile) return;
+        const formData = new FormData();
+        formData.append('mediaFile', file);
+        formData.append('userId', userProfile.userId);
+        try { await fetch('/api/upload', { method: 'POST', body: formData }); } catch(err) {}
+        uploadInput.value = '';
+    };
+}
 
-// --- BLOG ---
+// --- BLOG / FEED ---
 let currentBlogPosts = [];
 async function loadBlogPosts() {
     try {
         const res = await fetch('/api/blog');
         currentBlogPosts = await res.json();
         renderBlogPosts();
+        renderReels(currentBlogPosts);
     } catch(err) {}
 }
 
 function renderBlogPosts() {
+    if(!blogFeed) return;
     blogFeed.innerHTML = '';
-    currentBlogPosts.forEach(post => {
-        const isOwner = userProfile && (post.userId === userProfile.userId);
+    const postsOnly = currentBlogPosts.filter(p => !p.media || !p.media.isReel);
+    
+    postsOnly.forEach(post => {
         const div = document.createElement('div');
         div.className = 'blog-post summary';
         div.onclick = () => openFullPost(post.id);
@@ -308,7 +645,6 @@ function renderBlogPosts() {
             ${post.media ? `<div class="blog-post-media">${post.media.type === 'video' ? `<video src="${post.media.url}#t=0.5"></video>` : `<img src="${post.media.url}" loading="lazy">`}</div>` : ''}
             <div class="blog-actions">
                 <button class="blog-action-btn" onclick="event.stopPropagation(); socket.emit('blog_toggle_like', { postId: '${post.id}' })">❤️ <span>${post.likes || 0}</span></button>
-                <button class="blog-action-btn">💬 <span>${post.comments?.length || 0}</span></button>
             </div>
         `;
         blogFeed.appendChild(div);
@@ -323,39 +659,31 @@ function openFullPost(postId) {
         <div class="blog-post full-view">
             <div class="blog-post-header">
                 <strong>${post.author}</strong>
-                ${isOwner ? `<button class="btn secondary" style="font-size:0.7rem;" onclick="socket.emit('delete_blog_post', { postId: '${post.id}', userId: '${userProfile.userId}' }); blogPostModal.classList.remove('active');">🗑️ Borrar</button>` : ''}
             </div>
             <div class="blog-post-content">${post.text}</div>
             ${post.media ? `<div class="blog-post-media">${post.media.type === 'video' ? `<video src="${post.media.url}" controls autoplay></video>` : `<img src="${post.media.url}">`}</div>` : ''}
-            <div class="comments-section" style="margin-top:1rem; border-top:1px solid #333; padding-top:1rem;">
-                <div id="modal-comment-list">
-                    ${(post.comments || []).map(c => `<div><strong>${c.author}:</strong> ${c.text}</div>`).join('')}
-                </div>
-                <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-                    <input type="text" placeholder="Comentar..." id="modal-comment-input">
-                    <button class="btn primary" onclick="const i=document.getElementById('modal-comment-input'); socket.emit('blog_add_comment', { postId: '${post.id}', author: userProfile.fullName, text: i.value }); i.value='';">Post</button>
-                </div>
-            </div>
         </div>
     `;
     blogPostModal.classList.add('active');
 }
 
-closeBlogModalBtn.onclick = () => blogPostModal.classList.remove('active');
+if (closeBlogModalBtn) closeBlogModalBtn.onclick = () => blogPostModal.classList.remove('active');
 
-submitPostBtn.onclick = async () => {
-    const text = blogTextInput.value.trim();
-    const file = blogMediaInput.files[0];
-    if (!text && !file) return;
-    const formData = new FormData();
-    formData.append('text', text);
-    formData.append('author', userProfile.fullName);
-    formData.append('authorPhoto', userProfile.photo);
-    formData.append('userId', userProfile.userId);
-    if (file) formData.append('mediaFile', file);
-    try { await fetch('/api/blog', { method: 'POST', body: formData }); } catch(e) {}
-    blogTextInput.value = ''; blogMediaInput.value = ''; blogMediaName.innerText = '';
-};
+if (submitPostBtn) {
+    submitPostBtn.onclick = async () => {
+        const text = blogTextInput.value.trim();
+        const file = blogMediaInput.files[0];
+        if (!text && !file) return;
+        const formData = new FormData();
+        formData.append('text', text);
+        formData.append('author', userProfile.fullName);
+        formData.append('authorPhoto', userProfile.photo);
+        formData.append('userId', userProfile.userId);
+        if (file) formData.append('mediaFile', file);
+        try { await fetch('/api/blog', { method: 'POST', body: formData }); } catch(e) {}
+        blogTextInput.value = ''; blogMediaInput.value = ''; blogMediaName.innerText = '';
+    };
+}
 
 // --- CHAT & NAVIGATION ---
 function sendMessage() {
@@ -366,10 +694,11 @@ function sendMessage() {
         chatInput.value = '';
     }
 }
-sendMsgBtn.onclick = sendMessage;
-chatInput.onkeypress = (e) => { if(e.key==='Enter') sendMessage(); };
+if(sendMsgBtn) sendMsgBtn.onclick = sendMessage;
+if(chatInput) chatInput.onkeypress = (e) => { if(e.key==='Enter') sendMessage(); };
 
 function appendMessage(msg, isSelf) {
+    if(!chatMessages) return;
     const div = document.createElement('div');
     div.className = `message ${isSelf ? 'self' : ''}`;
     div.innerHTML = `${!isSelf ? `<div class="message-sender">${msg.sender}</div>` : ''}<div class="message-text">${msg.text}</div>`;
@@ -378,32 +707,31 @@ function appendMessage(msg, isSelf) {
 }
 
 function updateActiveNav(activeItem) {
-    navItems.forEach(item => item.classList.remove('active'));
-    activeItem.classList.add('active');
+    navItems.forEach(item => item && item.classList.remove('active'));
+    if(activeItem) activeItem.classList.add('active');
 }
 
-navGallery.onclick = () => { 
+if(navGallery) navGallery.onclick = () => { 
     gallerySection.classList.remove('hidden'); blogSection.classList.add('hidden'); usersSection.classList.add('hidden'); historySection.classList.add('hidden');
     updateActiveNav(navGallery); 
 };
-navBlog.onclick = () => { 
+if(navBlog) navBlog.onclick = () => { 
     gallerySection.classList.add('hidden'); blogSection.classList.remove('hidden'); usersSection.classList.add('hidden'); historySection.classList.add('hidden');
     loadBlogPosts(); updateActiveNav(navBlog); 
 };
-navUsers.onclick = () => {
+if(navUsers) navUsers.onclick = () => {
     gallerySection.classList.add('hidden'); blogSection.classList.add('hidden'); usersSection.classList.remove('hidden'); historySection.classList.add('hidden');
     loadUsers(); updateActiveNav(navUsers);
 };
-navHistory.onclick = () => {
+if(navHistory) navHistory.onclick = () => {
     gallerySection.classList.add('hidden'); blogSection.classList.add('hidden'); usersSection.classList.add('hidden'); historySection.classList.remove('hidden');
     updateActiveNav(navHistory);
 };
-navChat.onclick = () => {
+if(navChat) navChat.onclick = () => {
     chatSidebar.classList.toggle('hidden');
     if (!chatSidebar.classList.contains('hidden')) {
         updateActiveNav(navChat);
     } else {
-        // Return active state to the visible section
         const activeSection = !gallerySection.classList.contains('hidden') ? navGallery : 
                              (!blogSection.classList.contains('hidden') ? navBlog : 
                              (!usersSection.classList.contains('hidden') ? navUsers : navHistory));
@@ -411,45 +739,273 @@ navChat.onclick = () => {
     }
 };
 
-closeChatBtn.onclick = () => navChat.click();
+if(closeChatBtn) closeChatBtn.onclick = () => navChat.click();
 
 // --- SOCKET EVENTS ---
 socket.on('update_like', data => { 
     const item = currentMediaItems.find(i => i.name === data.id); 
     if(item){ item.likes = data.likes; renderGallery(currentMediaItems); }
 });
-socket.on('chat_message', msg => appendMessage(msg, false));
+socket.on('chat_message', msg => {
+    appendMessage(msg, false);
+    if (userProfile && msg.sender !== userProfile.fullName) {
+        msgSound.play().catch(() => {});
+    }
+});
 
 socket.on('private_message', msg => {
-    // If the modal for this sender is open, append the message
     if (privateChatModal.classList.contains('active') && currentRecipientId === msg.sender_id) {
         appendPrivateMessage(msg);
     } else {
-        // Simple notification
         alert(`Nuevo mensaje de ${msg.sender_name}: ${msg.text}`);
+    }
+    if (userProfile && msg.sender_id !== userProfile.userId) {
+        msgSound.play().catch(() => {});
     }
 });
 socket.on('user_joined', data => { 
+    if(!chatMessages) return;
     const div = document.createElement('div'); div.style.fontSize='0.7rem'; div.style.opacity='0.5'; div.style.textAlign='center';
     div.innerText=`${data.name} se unió`; chatMessages.appendChild(div); 
 });
 socket.on('blog_update_likes', data => {
+    if (currentReelId === data.postId) {
+        reelLikeCount.innerText = data.likes;
+    }
     const post = currentBlogPosts.find(p => p.id === data.postId);
-    if(post){ post.likes = data.likes; renderBlogPosts(); }
+    if (post) {
+        post.likes = data.likes;
+        renderBlogPosts();
+        renderReels(currentBlogPosts);
+    }
 });
 socket.on('blog_new_comment', data => {
+    // If the Reel viewer is currently open on this post, update it live
+    if (currentReelId === data.postId) {
+        const commentsList = Array.from(reelCommentsList.children);
+        if(commentsList.length === 1 && commentsList[0].innerText.includes('primero')) reelCommentsList.innerHTML = '';
+        
+        const div = document.createElement('div');
+        div.className = 'reel-comment-item';
+        div.innerHTML = `<span class="reel-comment-author">${data.comment.author}:</span> <span class="reel-comment-text">${data.comment.text}</span>`;
+        reelCommentsList.appendChild(div);
+        
+        const currentCount = parseInt(reelCommentCount.innerText) || 0;
+        reelCommentCount.innerText = currentCount + 1;
+        reelCommentsList.scrollTop = reelCommentsList.scrollHeight;
+    }
+
     const post = currentBlogPosts.find(p => p.id === data.postId);
-    if(post){ (post.comments = post.comments || []).push(data.comment); renderBlogPosts(); }
+    if(post) { 
+        (post.comments = post.comments || []).push(data.comment); 
+        renderBlogPosts(); 
+    }
 });
 socket.on('blog_post_deleted', data => {
     currentBlogPosts = currentBlogPosts.filter(p => p.id !== data.postId); renderBlogPosts();
 });
 socket.on('user_status_change', data => {
     const user = allUsersData.find(u => u.userId === data.userId);
-    if (user) { user.isOnline = (data.status === 'online'); renderUsers(allUsersData); }
+    if (user) { 
+        user.isOnline = (data.status === 'online'); 
+        renderUsers(allUsersData); 
+        renderActiveUsers(allUsersData);
+    }
 });
 socket.on('new_media', () => loadMedia());
 socket.on('media_deleted', () => loadMedia());
-socket.on('new_blog_post', post => { currentBlogPosts.unshift(post); renderBlogPosts(); });
+socket.on('new_blog_post', post => { currentBlogPosts.unshift(post); renderBlogPosts(); renderReels(currentBlogPosts); });
 
 init();
+
+// --- TIENDA / E-COMMERCE ---
+// storeSection is declared at the top
+// navStore already declared at the top
+const storeGrid = document.getElementById('store-grid');
+const floatingCartBtn = document.getElementById('floating-cart-btn');
+const cartItemCount = document.getElementById('cart-item-count');
+const cartModal = document.getElementById('cart-modal');
+const closeCartBtn = document.getElementById('close-cart-btn');
+const cartItemsList = document.getElementById('cart-items-list');
+const cartSubtotalEl = document.getElementById('cart-subtotal');
+const cartDiscountEl = document.getElementById('cart-discount');
+const cartTotalEl = document.getElementById('cart-total');
+const checkoutBtn = document.getElementById('checkout-btn');
+const invoiceModal = document.getElementById('invoice-modal');
+const closeInvoiceBtn = document.getElementById('close-invoice-btn');
+const addProductBtn = document.getElementById('add-product-btn');
+const addProductModal = document.getElementById('add-product-modal');
+const saveProductBtn = document.getElementById('save-product-btn');
+const cancelProductBtn = document.getElementById('cancel-product-btn');
+
+let storeProducts = [
+    { id: 'bk1', name: 'Whopper®', price: 6.50, type: 'food', img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk2', name: 'Cheeseburger', price: 3.50, type: 'food', img: 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk3', name: 'Patatas Clásicas', price: 2.50, type: 'food', img: 'https://images.unsplash.com/photo-1630384060421-cb20d0e0649d?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk4', name: 'Aros de Cebolla', price: 3.00, type: 'food', img: 'https://images.unsplash.com/photo-1639024471210-5ba6cdbbfaec?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk5', name: 'Coca-Cola (Promo)', price: 2.20, type: 'drink', img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=500&q=80' },
+    { id: 'bk6', name: 'Fanta Naranja (Promo)', price: 2.20, type: 'drink', img: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=500&q=80' }
+];
+
+let cart = [];
+
+function renderStore() {
+    if (!storeGrid) return;
+    storeGrid.innerHTML = '';
+    storeProducts.forEach(product => {
+        const div = document.createElement('div');
+        div.className = 'product-card';
+        div.innerHTML = `
+            <img src="${product.img}" class="product-img" onerror="this.src='https://via.placeholder.com/300x200?text=BK+Item'">
+            <div class="product-info">
+                <span class="product-name">${product.name}</span>
+                <span class="product-price">${product.price.toFixed(2)} €</span>
+                <button class="add-to-cart-btn" onclick="addToCart('${product.id}')">Añadir al Carrito</button>
+            </div>
+        `;
+        storeGrid.appendChild(div);
+    });
+}
+
+window.addToCart = function(productId) {
+    const product = storeProducts.find(p => p.id === productId);
+    if (!product) return;
+    const existing = cart.find(i => i.id === productId);
+    if (existing) existing.qty++;
+    else cart.push({ ...product, qty: 1 });
+    updateCartUI();
+};
+
+window.changeQty = function(productId, delta) {
+    const item = cart.find(i => i.id === productId);
+    if (!item) return;
+    item.qty += delta;
+    if (item.qty <= 0) cart = cart.filter(i => i.id !== productId);
+    updateCartUI();
+};
+
+function updateCartUI() {
+    const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+    cartItemCount.innerText = totalItems;
+    if (totalItems > 0 && storeSection && !storeSection.classList.contains('hidden')) {
+        floatingCartBtn.classList.remove('hidden');
+    } else {
+        floatingCartBtn.classList.add('hidden');
+    }
+
+    if (!cartItemsList) return;
+    cartItemsList.innerHTML = '';
+    let subtotal = 0;
+    let drinkCount = 0;
+    
+    cart.forEach(item => {
+        subtotal += item.price * item.qty;
+        if (item.type === 'drink') drinkCount += item.qty;
+        
+        const div = document.createElement('div');
+        div.className = 'cart-item';
+        div.innerHTML = `
+            <span>${item.name} x${item.qty}</span>
+            <div class="cart-item-controls">
+                <span>${(item.price * item.qty).toFixed(2)}€</span>
+                <button onclick="changeQty('${item.id}', -1)">-</button>
+                <button onclick="changeQty('${item.id}', 1)">+</button>
+            </div>
+        `;
+        cartItemsList.appendChild(div);
+    });
+
+    // 3x1 Drink Promo Calculation
+    let discount = 0;
+    if (drinkCount >= 3) {
+        const freeDrinks = Math.floor(drinkCount / 3) * 2; // For every 3 drinks, 2 are free
+        const drinkItems = cart.filter(i => i.type === 'drink');
+        if (drinkItems.length > 0) {
+            const avgDrinkPrice = drinkItems.reduce((s, i) => s + (i.price * i.qty), 0) / drinkCount;
+            discount = freeDrinks * avgDrinkPrice;
+        }
+    }
+
+    const total = subtotal - discount;
+    cartSubtotalEl.innerText = `${subtotal.toFixed(2)} €`;
+    cartDiscountEl.innerText = `-${discount.toFixed(2)} €`;
+    cartTotalEl.innerText = `${total.toFixed(2)} €`;
+}
+
+if (floatingCartBtn) floatingCartBtn.onclick = () => cartModal.classList.add('active');
+if (closeCartBtn) closeCartBtn.onclick = () => cartModal.classList.remove('active');
+
+if (checkoutBtn) {
+    checkoutBtn.onclick = () => {
+        if (cart.length === 0) return alert('El carrito está vacío.');
+        cartModal.classList.remove('active');
+        generateInvoice();
+    };
+}
+
+function generateInvoice() {
+    if (!invoiceModal) return;
+    const invDate = new Date().toLocaleString();
+    const invId = Math.floor(Math.random() * 1000000);
+    
+    document.getElementById('invoice-date').innerText = invDate;
+    document.getElementById('invoice-id').innerText = invId;
+    
+    const invoiceItems = document.getElementById('invoice-items');
+    invoiceItems.innerHTML = '';
+    let subtotal = 0;
+    let drinkCount = 0;
+    
+    cart.forEach(item => {
+        subtotal += item.price * item.qty;
+        if (item.type === 'drink') drinkCount += item.qty;
+        const div = document.createElement('div');
+        div.className = 'invoice-item-row';
+        div.innerHTML = `<span>${item.qty}x ${item.name.substring(0,15)}</span><span>${(item.price * item.qty).toFixed(2)}</span>`;
+        invoiceItems.appendChild(div);
+    });
+
+    let discount = 0;
+    if (drinkCount >= 3) {
+        const freeDrinks = Math.floor(drinkCount / 3) * 2;
+        const drinkItems = cart.filter(i => i.type === 'drink');
+        if (drinkItems.length > 0) discount = freeDrinks * (drinkItems.reduce((s, i) => s + (i.price * i.qty), 0) / drinkCount);
+    }
+
+    const total = subtotal - discount;
+    document.getElementById('inv-subtotal').innerText = subtotal.toFixed(2);
+    document.getElementById('inv-discount').innerText = '-' + discount.toFixed(2);
+    document.getElementById('inv-total').innerText = total.toFixed(2) + ' €';
+
+    invoiceModal.classList.add('active');
+    
+    cart = [];
+    updateCartUI();
+}
+
+if (closeInvoiceBtn) closeInvoiceBtn.onclick = () => invoiceModal.classList.remove('active');
+
+if (addProductBtn) addProductBtn.onclick = () => addProductModal.classList.add('active');
+if (cancelProductBtn) cancelProductBtn.onclick = () => { addProductModal.classList.remove('active'); };
+if (saveProductBtn) {
+    saveProductBtn.onclick = () => {
+        const name = document.getElementById('new-prod-name').value;
+        const price = parseFloat(document.getElementById('new-prod-price').value);
+        const type = document.getElementById('new-prod-type').value;
+        const img = document.getElementById('new-prod-img').value || 'https://images.unsplash.com/photo-1550547660-d9450f859349?auto=format&fit=crop&w=500&q=80';
+        
+        if (!name || isNaN(price)) return alert('Nombre y precio son obligatorios.');
+        
+        const newProd = { id: 'bk_' + Date.now(), name, price, type, img };
+        storeProducts.push(newProd);
+        renderStore();
+        addProductModal.classList.remove('active');
+        
+        document.getElementById('new-prod-name').value = '';
+        document.getElementById('new-prod-price').value = '';
+        document.getElementById('new-prod-img').value = '';
+    };
+}
+
+// Initial render for store
+renderStore();
