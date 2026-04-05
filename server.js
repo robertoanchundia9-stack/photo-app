@@ -178,6 +178,42 @@ app.post('/api/register-user', async (req, res) => {
     res.json({ success: !error });
 });
 
+app.post('/api/update-profile', upload.array('profilePhotos', 4), async (req, res) => {
+    const { userId, hobbies, privacy, privatePhotos } = req.body;
+    if (!supabase || !userId) return res.status(400).json({ success: false, error: 'User ID missing or no DB' });
+
+    let photoUrls = [];
+    if (req.files && req.files.length > 0) {
+        photoUrls = req.files.map(file => file.path);
+    }
+
+    try {
+        const updateData = {
+            user_id: userId,
+            hobbies: hobbies || '',
+            privacy: privacy || 'public',
+            private_photos: privatePhotos === 'true',
+            last_seen: Date.now()
+        };
+
+        if (photoUrls.length > 0) {
+            // Assume the 'photos' column can hold JSON array or similar.
+            updateData.photos = photoUrls;
+        }
+
+        const { error } = await supabase.from('users').upsert(updateData);
+        
+        if (error) {
+            console.error('Error updating profile:', error.message);
+            return res.status(500).json({ success: false, error: error.message });
+        }
+        res.json({ success: true, photoUrls });
+    } catch(err) {
+        console.error(err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 app.post('/api/profile-photo', upload.single('mediaFile'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'No file' });
     res.json({ url: req.file.path });
