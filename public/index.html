@@ -239,7 +239,7 @@
                 </div>
             </header>
             <div class="profile-container">
-                <div class="profile-card glass">
+                <div class="profile-card glass" id="profile-edit-card">
                     <form id="profile-form">
                         <div class="form-group">
                             <label for="profile-hobbies">Aficiones (Hobbies)</label>
@@ -271,6 +271,31 @@
 
                         <button type="submit" class="btn primary" style="width: 100%; margin-top: 1rem;">Guardar Perfil</button>
                     </form>
+                </div>
+
+                <!-- NEW: Profile Display Card -->
+                <div class="profile-display-card glass hidden" id="profile-display-card">
+                    <div class="profile-display-header">
+                        <div class="profile-display-avatar-wrapper">
+                            <img id="display-avatar" src="" alt="Avatar">
+                        </div>
+                        <h2 id="display-name" class="neon-title"></h2>
+                        <span id="display-privacy-badge" class="privacy-badge"></span>
+                    </div>
+
+                    <div class="display-section">
+                        <h3>🎨 Mis Aficiones</h3>
+                        <p id="display-hobbies" class="display-text"></p>
+                    </div>
+
+                    <div class="display-section" id="display-photos-section">
+                        <h3>📸 Galería Personal</h3>
+                        <div id="display-photos-grid" class="fancy-photo-grid"></div>
+                    </div>
+
+                    <div class="display-actions">
+                        <button id="btn-edit-profile" class="btn secondary" style="width: 100%;">✏️ Editar Perfil</button>
+                    </div>
                 </div>
             </div>
         </main>

@@ -856,6 +856,9 @@ init();
 const profileForm = document.getElementById('profile-form');
 const profilePhotosInput = document.getElementById('profile-photos-input');
 const profilePhotosPreview = document.getElementById('profile-photos-preview');
+const profileEditCard = document.getElementById('profile-edit-card');
+const profileDisplayCard = document.getElementById('profile-display-card');
+const btnEditProfile = document.getElementById('btn-edit-profile');
 
 if (profilePhotosInput) {
     profilePhotosInput.addEventListener('change', (e) => {
@@ -871,6 +874,40 @@ if (profilePhotosInput) {
             };
             reader.readAsDataURL(file);
         });
+    });
+}
+
+function showProfileDisplay(data, hobbies, privacy, privatePhotos) {
+    if(profileEditCard) profileEditCard.classList.add('hidden');
+    if(profileDisplayCard) profileDisplayCard.classList.remove('hidden');
+
+    document.getElementById('display-avatar').src = userProfile.photo;
+    document.getElementById('display-name').innerText = userProfile.fullName;
+    
+    let privacyText = privacy === 'public' ? '🌍 Público' : '👥 Privado';
+    if(privatePhotos) privacyText += ' 🔒 (Fotos Seguras)';
+    document.getElementById('display-privacy-badge').innerText = privacyText;
+    
+    document.getElementById('display-hobbies').innerText = hobbies || "Aún no has añadido aficiones.";
+
+    const grid = document.getElementById('display-photos-grid');
+    grid.innerHTML = '';
+    if (data.photoUrls && data.photoUrls.length > 0) {
+        document.getElementById('display-photos-section').style.display = 'block';
+        data.photoUrls.forEach(url => {
+            const img = document.createElement('img');
+            img.src = url;
+            grid.appendChild(img);
+        });
+    } else {
+        document.getElementById('display-photos-section').style.display = 'none';
+    }
+}
+
+if (btnEditProfile) {
+    btnEditProfile.addEventListener('click', () => {
+        if(profileDisplayCard) profileDisplayCard.classList.add('hidden');
+        if(profileEditCard) profileEditCard.classList.remove('hidden');
     });
 }
 
@@ -899,7 +936,10 @@ if (profileForm) {
             const res = await fetch('/api/update-profile', { method: 'POST', body: formData });
             const data = await res.json();
             if (data.success) {
-                alert('Perfil actualizado correctamente.');
+                showProfileDisplay(data, hobbies, privacy, privatePhotos);
+                // Clear inputs
+                profilePhotosInput.value = '';
+                profilePhotosPreview.innerHTML = '';
             } else {
                 alert('Error al actualizar el perfil.');
             }
