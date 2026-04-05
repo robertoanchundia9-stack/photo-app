@@ -25,6 +25,10 @@ const downloadBtn = document.getElementById('download-btn');
 const blogPostModal = document.getElementById('blog-post-modal');
 const closeBlogModalBtn = document.getElementById('close-blog-modal-btn');
 const blogPostFullContent = document.getElementById('blog-post-full-content');
+const blogCommentsList = document.getElementById('blog-comments-list');
+const blogCommentInput = document.getElementById('blog-comment-input');
+const sendBlogCommentBtn = document.getElementById('send-blog-comment');
+let currentBlogPostId = null;
 
 const themeToggle = document.getElementById('theme-toggle');
 const currentUserHeader = document.getElementById('current-user-header');
@@ -88,6 +92,7 @@ if (themeToggle) {
 const gallerySection = document.getElementById('gallery-section');
 const blogSection = document.getElementById('blog-section');
 const historySection = document.getElementById('history-section');
+const profileSection = document.getElementById('profile-section');
 
 
 // Blog/Feed Elements
@@ -107,7 +112,8 @@ const navGallery = document.getElementById('nav-gallery');
 const navBlog = document.getElementById('nav-blog');
 const navHistory = document.getElementById('nav-history');
 const navChat = document.getElementById('nav-chat');
-const navItems = [navGallery, navBlog, navHistory, navChat];
+const navProfile = document.getElementById('nav-profile');
+const navItems = [navGallery, navBlog, navHistory, navChat, navProfile];
 const appLayout = document.querySelector('.app-layout');
 
 
@@ -137,7 +143,8 @@ function init() {
 const pages = {
     'nav-gallery': gallerySection,
     'nav-blog': blogSection,
-    'nav-history': historySection
+    'nav-history': historySection,
+    'nav-profile': profileSection
 };
 
 navItems.forEach(btn => {
@@ -530,7 +537,7 @@ if (sendReelCommentBtn && reelCommentInput) {
         const text = reelCommentInput.value.trim();
         if (text && userProfile && currentReelId) {
             const comment = { author: userProfile.fullName, text, createdAt: new Date() };
-            socket.emit('blog_new_comment', { postId: currentReelId, comment });
+            socket.emit('blog_add_comment', { postId: currentReelId, author: userProfile.fullName, text });
             
             // Optimistic UI update
             const post = currentBlogPosts.find(p => p.id === currentReelId);
@@ -660,17 +667,53 @@ function renderBlogPosts() {
 function openFullPost(postId) {
     const post = currentBlogPosts.find(p => p.id === postId);
     if (!post) return;
+    currentBlogPostId = post.id;
     const isOwner = userProfile && (post.userId === userProfile.userId);
     blogPostFullContent.innerHTML = `
         <div class="blog-post full-view">
             <div class="blog-post-header">
-                <strong>${post.author}</strong>
+                <div class="blog-post-author-info">
+                    <img src="${post.authorPhoto || 'https://www.gravatar.com/avatar/0?d=mp'}" class="blog-post-avatar">
+                    <div class="blog-post-author">${post.author}</div>
+                </div>
             </div>
             <div class="blog-post-content">${post.text}</div>
             ${post.media ? `<div class="blog-post-media">${post.media.type === 'video' ? `<video src="${post.media.url}" controls autoplay></video>` : `<img src="${post.media.url}">`}</div>` : ''}
         </div>
     `;
+    renderBlogComments(post.comments || []);
     blogPostModal.classList.add('active');
+}
+
+function renderBlogComments(comments) {
+    if(!blogCommentsList) return;
+    blogCommentsList.innerHTML = '';
+    if(comments.length === 0){
+        blogCommentsList.innerHTML = '<div style="text-align:center; opacity:0.5; margin-top:1rem;">No hay comentarios todavía 💬</div>';
+        return;
+    }
+    comments.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'reel-comment-item'; // Reuse styling
+        div.innerHTML = `
+            <span class="reel-comment-author">${c.author}:</span>
+            <span class="reel-comment-text">${c.text}</span>
+        `;
+        blogCommentsList.appendChild(div);
+    });
+    blogCommentsList.scrollTop = blogCommentsList.scrollHeight;
+}
+
+if (sendBlogCommentBtn && blogCommentInput) {
+    const sendComment = () => {
+        const text = blogCommentInput.value.trim();
+        if (text && userProfile && currentBlogPostId) {
+            socket.emit('blog_add_comment', { postId: currentBlogPostId, author: userProfile.fullName, text });
+            blogCommentInput.value = '';
+        }
+    };
+    sendBlogCommentBtn.onclick = sendComment;
+    blogCommentInput.onkeypress = (e) => { if(e.key === 'Enter') sendComment(); };
 }
 
 if (closeBlogModalBtn) closeBlogModalBtn.onclick = () => blogPostModal.classList.remove('active');
@@ -784,6 +827,9 @@ socket.on('blog_new_comment', data => {
     if(post) { 
         (post.comments = post.comments || []).push(data.comment); 
         renderBlogPosts(); 
+        if (currentBlogPostId === data.postId) {
+            renderBlogComments(post.comments);
+        }
     }
 });
 socket.on('blog_post_deleted', data => {
@@ -805,4 +851,64 @@ init();
 
 
 // End of application logic
+
+// --- NEW PROFILE SETTINGS ---
+const profileForm = document.getElementById('profile-form');
+const profilePhotosInput = document.getElementById('profile-photos-input');
+const profilePhotosPreview = document.getElementById('profile-photos-preview');
+
+if (profilePhotosInput) {
+    profilePhotosInput.addEventListener('change', (e) => {
+        profilePhotosPreview.innerHTML = '';
+        const files = Array.from(e.target.files).slice(0, 4); // Max 4
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                img.className = 'photo-preview-item';
+                profilePhotosPreview.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+}
+
+if (profileForm) {
+    profileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!userProfile) return alert('Debes configurar tu perfil inicial primero.');
+        
+        const hobbies = document.getElementById('profile-hobbies').value.trim();
+        const privacy = document.getElementById('profile-privacy').value;
+        const privatePhotos = document.getElementById('profile-private-photos').checked;
+        const files = Array.from(profilePhotosInput.files).slice(0, 4);
+
+        const submitBtn = profileForm.querySelector('button[type="submit"]');
+        submitBtn.innerText = 'Guardando...';
+        submitBtn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('userId', userProfile.userId);
+        formData.append('hobbies', hobbies);
+        formData.append('privacy', privacy);
+        formData.append('privatePhotos', privatePhotos);
+        files.forEach(file => formData.append('profilePhotos', file));
+
+        try {
+            const res = await fetch('/api/update-profile', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                alert('Perfil actualizado correctamente.');
+            } else {
+                alert('Error al actualizar el perfil.');
+            }
+        } catch (err) {
+            alert('Error al conectar con el servidor.');
+        } finally {
+            submitBtn.innerText = 'Guardar Perfil';
+            submitBtn.disabled = false;
+        }
+    });
+}
 

@@ -59,6 +59,17 @@
         <div class="modal-content glass blog-modal-content">
             <button id="close-blog-modal-btn" class="close-btn">&times;</button>
             <div id="blog-post-full-content"></div>
+            <hr style="opacity: 0.1; margin: 1rem 0;">
+            <div class="blog-comments-section" id="blog-comments-section">
+                <div class="blog-comments-header">
+                    <strong>Comentarios</strong>
+                </div>
+                <div id="blog-comments-list" class="blog-comments-list"></div>
+                <div class="blog-comment-input-area">
+                    <input type="text" id="blog-comment-input" placeholder="Escribe un comentario..." autocomplete="off">
+                    <button id="send-blog-comment" class="btn primary btn-small">Publicar</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -220,6 +231,50 @@
             </div>
         </main>
 
+        <!-- Profile Section -->
+        <main id="profile-section" class="profile-section hidden">
+            <header class="glass-header">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <h1 class="neon-title">👤 Perfil</h1>
+                </div>
+            </header>
+            <div class="profile-container">
+                <div class="profile-card glass">
+                    <form id="profile-form">
+                        <div class="form-group">
+                            <label for="profile-hobbies">Aficiones (Hobbies)</label>
+                            <textarea id="profile-hobbies" placeholder="Ej. Fotografía, música, viajar..." rows="3"></textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Fotos adicionales (Máx. 4)</label>
+                            <label class="btn secondary" style="display: inline-block; width: fit-content;">
+                                📷 Elegir Fotos
+                                <input type="file" id="profile-photos-input" accept="image/*" multiple style="display: none;">
+                            </label>
+                            <div id="profile-photos-preview" class="photos-preview-grid"></div>
+                            <small>Sube hasta 4 fotos para tu perfil.</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Privacidad del Perfil</label>
+                            <select id="profile-privacy" class="fancy-select">
+                                <option value="public">🌍 Público</option>
+                                <option value="friends">👥 Privado (Solo Amigos)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group checkbox-group">
+                            <input type="checkbox" id="profile-private-photos">
+                            <label for="profile-private-photos">🔒 Fotos privadas (requieren autorización)</label>
+                        </div>
+
+                        <button type="submit" class="btn primary" style="width: 100%; margin-top: 1rem;">Guardar Perfil</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+
         <!-- Sidebar Chat -->
         <aside id="chat-sidebar" class="chat-sidebar glass hidden">
             <div class="chat-header">
@@ -251,6 +306,10 @@
             <button id="nav-chat" class="nav-item">
                 <span class="nav-icon">💬</span>
                 <span class="nav-label">Chat</span>
+            </button>
+            <button id="nav-profile" class="nav-item">
+                <span class="nav-icon">👤</span>
+                <span class="nav-label">Perfil</span>
             </button>
         </nav>
     </div>

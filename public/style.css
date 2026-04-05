@@ -124,6 +124,48 @@ body::before {
 }
 .blog-post-media img, .blog-post-media video { width: 100%; max-height: 350px !important; object-fit: cover; display: block; }
 
+/* Blog Comments */
+.blog-comments-section {
+    margin-top: 1rem;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+}
+.blog-comments-header {
+    margin-bottom: 0.8rem;
+    font-size: 0.9rem;
+    color: var(--secondary-accent);
+}
+.blog-comments-list {
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    padding-right: 0.5rem;
+}
+.blog-comment-input-area {
+    display: flex;
+    gap: 0.5rem;
+}
+.blog-comment-input-area input {
+    flex: 1;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    color: #fff;
+    padding: 0.6rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+.btn-small {
+    padding: 0.4rem 1rem !important;
+    font-size: 0.8rem !important;
+    border-radius: 20px !important;
+    height: auto !important;
+    width: auto !important;
+}
+
 /* Gallery Section */
 .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 1rem; padding: 1rem; }
 .media-card { 
@@ -977,3 +1019,63 @@ body.light-mode .history-section {
 }
 
 .hidden { display: none !important; }
+
+/* Profile Section Styles */
+.profile-section {
+    padding: 1rem;
+    padding-bottom: 5rem;
+    overflow-y: auto;
+    height: 100vh;
+}
+.profile-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.profile-card {
+    padding: 1.5rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    background: rgba(30, 0, 30, 0.4);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 0, 255, 0.1);
+}
+.form-group {
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
+}
+.form-group label {
+    margin-bottom: 0.5rem;
+    color: #ff00ff;
+    font-weight: bold;
+}
+.form-group textarea, .form-group input[type="text"], .fancy-select {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 0, 255, 0.3);
+    color: white;
+    padding: 0.8rem;
+    border-radius: 8px;
+    width: 100%;
+}
+.photos-preview-grid {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+.photo-preview-item {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 0, 255, 0.5);
+}
+.checkbox-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+}
+.checkbox-group label {
+    margin-bottom: 0;
+    color: white;
+}
