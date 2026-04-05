@@ -953,9 +953,13 @@ if (profileForm) {
 }
 
 // --- PUBLIC PROFILE VIEW ---
-const publicProfileModal = document.getElementById('public-profile-modal');
+const publicProfileSection = document.getElementById('public-profile-section');
 const closePublicProfileBtn = document.getElementById('close-public-profile-btn');
 const btnPublicChat = document.getElementById('btn-public-chat');
+
+function hideAllSections() {
+    document.querySelectorAll('main').forEach(m => m.classList.add('hidden'));
+}
 
 function openPublicProfile(userId) {
     const u = allUsersData.find(user => user.userId === userId);
@@ -989,14 +993,21 @@ function openPublicProfile(userId) {
 
     // Set chat button
     btnPublicChat.onclick = () => {
-        publicProfileModal.classList.remove('active');
+        hideAllSections();
+        const gallerySection = document.getElementById('gallery-section');
+        if(gallerySection) gallerySection.classList.remove('hidden');
         openPrivateChat(u.userId, u.fullName);
     };
 
-    if (publicProfileModal) publicProfileModal.classList.add('active');
+    hideAllSections();
+    if (publicProfileSection) publicProfileSection.classList.remove('hidden');
 }
 
 if (closePublicProfileBtn) {
-    closePublicProfileBtn.onclick = () => publicProfileModal.classList.remove('active');
+    closePublicProfileBtn.onclick = () => {
+        hideAllSections();
+        const gallerySection = document.getElementById('gallery-section');
+        if(gallerySection) gallerySection.classList.remove('hidden');
+    };
 }
 
