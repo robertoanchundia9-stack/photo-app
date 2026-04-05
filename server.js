@@ -149,6 +149,10 @@ app.get('/api/users', async (req, res) => {
         userId: u.user_id,
         fullName: u.full_name,
         photo: u.photo,
+        hobbies: u.hobbies || '',
+        privacy: u.privacy || 'public',
+        privatePhotos: u.private_photos === true,
+        photos: u.photos || [],
         isOnline: onlineUserIds.has(u.user_id)
     }));
     res.json(users);
