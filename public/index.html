@@ -389,6 +389,36 @@
 
 
 
+    <!-- Public Profile Modal -->
+    <div id="public-profile-modal" class="modal">
+        <div class="modal-content glass" style="padding: 0; overflow: hidden; background: transparent; border: none; max-width: 500px; width: 90%;">
+            <button id="close-public-profile-btn" class="close-btn" style="z-index: 10; background: rgba(0,0,0,0.5); border-radius: 50%; width: 30px; height: 30px;">&times;</button>
+            <div class="profile-display-card" style="border-radius: 15px;">
+                <div class="profile-display-header">
+                    <div class="profile-display-avatar-wrapper">
+                        <img id="public-display-avatar" src="" alt="Avatar">
+                    </div>
+                    <h2 id="public-display-name" class="neon-title"></h2>
+                    <span id="public-display-privacy-badge" class="privacy-badge"></span>
+                </div>
+
+                <div class="display-section">
+                    <h3>🎨 Aficiones</h3>
+                    <p id="public-display-hobbies" class="display-text"></p>
+                </div>
+
+                <div class="display-section" id="public-display-photos-section">
+                    <h3>📸 Galería Pública</h3>
+                    <div id="public-display-photos-grid" class="fancy-photo-grid"></div>
+                </div>
+
+                <div class="display-actions">
+                    <button id="btn-public-chat" class="btn primary" style="width: 100%; font-size: 1.1rem; padding: 1rem;">💬 Iniciar Chat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js?v=7"></script>

@@ -260,7 +260,7 @@ function renderActiveUsers(users) {
     onlineOthers.forEach(u => {
         const div = document.createElement('div');
         div.className = 'active-user-container';
-        div.onclick = () => openPrivateChat(u.userId, u.fullName);
+        div.onclick = () => openPublicProfile(u.userId);
         div.innerHTML = `
             <div class="active-user-circle">
                 <img src="${u.photo}" alt="${u.fullName}">
@@ -285,7 +285,7 @@ function renderUsers(users) {
                 <span class="status-dot ${statusClass}"></span>
             </div>
             <div class="user-card-name">${u.fullName}</div>
-            <button class="btn primary" style="width:100%; margin-top:0.5rem; font-size:0.7rem;" onclick="openPrivateChat('${u.userId}', '${u.fullName}')">💬 Chat</button>
+            <button class="btn primary" style="width:100%; margin-top:0.5rem; font-size:0.7rem;" onclick="openPublicProfile('${u.userId}')">👤 Ver Perfil</button>
         `;
         usersGrid.appendChild(div);
     });
@@ -950,5 +950,53 @@ if (profileForm) {
             submitBtn.disabled = false;
         }
     });
+}
+
+// --- PUBLIC PROFILE VIEW ---
+const publicProfileModal = document.getElementById('public-profile-modal');
+const closePublicProfileBtn = document.getElementById('close-public-profile-btn');
+const btnPublicChat = document.getElementById('btn-public-chat');
+
+function openPublicProfile(userId) {
+    const u = allUsersData.find(user => user.userId === userId);
+    if (!u) return;
+
+    document.getElementById('public-display-avatar').src = u.photo || 'https://www.gravatar.com/avatar/0?d=mp';
+    document.getElementById('public-display-name').innerText = u.fullName;
+    document.getElementById('public-display-hobbies').innerText = u.hobbies || "Sin aficiones públicas.";
+
+    let privacyText = u.privacy === 'public' ? '🌍 Público' : '👥 Privado';
+    if(u.privatePhotos) privacyText += ' 🔒 (Fotos Seguras)';
+    document.getElementById('public-display-privacy-badge').innerText = privacyText;
+
+    const grid = document.getElementById('public-display-photos-grid');
+    grid.innerHTML = '';
+    
+    // Privacy Logic for Public Gallery
+    if (u.privacy === 'friends' || u.privatePhotos) {
+        document.getElementById('public-display-photos-section').style.display = 'block';
+        grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: #888; padding: 2rem 0;">🔒 Las fotos son privadas</div>';
+    } else if (u.photos && u.photos.length > 0) {
+        document.getElementById('public-display-photos-section').style.display = 'block';
+        u.photos.forEach(url => {
+            const img = document.createElement('img');
+            img.src = url;
+            grid.appendChild(img);
+        });
+    } else {
+        document.getElementById('public-display-photos-section').style.display = 'none';
+    }
+
+    // Set chat button
+    btnPublicChat.onclick = () => {
+        publicProfileModal.classList.remove('active');
+        openPrivateChat(u.userId, u.fullName);
+    };
+
+    if (publicProfileModal) publicProfileModal.classList.add('active');
+}
+
+if (closePublicProfileBtn) {
+    closePublicProfileBtn.onclick = () => publicProfileModal.classList.remove('active');
 }
 
