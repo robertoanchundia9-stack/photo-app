@@ -243,7 +243,17 @@ async function loadUsers() {
         allUsersData = await res.json();
         renderUsers(allUsersData);
         renderActiveUsers(allUsersData);
+        checkAndLoadMyProfile(); // <--- Check if my profile is already filled
     } catch(e) {}
+}
+
+function checkAndLoadMyProfile() {
+    if (!userProfile) return;
+    const me = allUsersData.find(u => u.userId === userProfile.userId);
+    if (me && (me.hobbies || (me.photos && me.photos.length > 0))) {
+        // Form is filled, prep presentation
+        showProfileDisplay({ photoUrls: me.photos }, me.hobbies, me.privacy, me.privatePhotos);
+    }
 }
 
 function renderActiveUsers(users) {
